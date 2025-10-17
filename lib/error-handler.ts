@@ -44,8 +44,8 @@ export const handleFetchError = async (response: Response): Promise<never> => {
 
   try {
     errorData = await response.json();
-    errorMessage = errorData.message || errorMessage;
-    errorCode = errorData.code;
+    errorMessage = errorData?.message || errorMessage;
+    errorCode = errorData?.code;
   } catch {
     // Si no se puede parsear el JSON, usar mensaje por defecto
   }
