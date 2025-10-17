@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "mcp__context7__get-library-docs",
+      "Read(//c/Users/Albo/Desktop/sistema-ingresos-clublavictoria/backend/src/**)",
+      "Read(//c/Users/Albo/Desktop/sistema-ingresos-clublavictoria/backend/**)",
+      "Bash(npm run lint:*)",
+      "Read(//c/Users/Albo/Desktop/sistema-ingresos-clublavictoria/mobile/**)",
+      "mcp__context7__resolve-library-id"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
