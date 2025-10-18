@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 // Importar tipos y utilidades centralizadas
 import { Socio, RespuestaBusqueda, Paginacion } from '@/lib/types';
 import { BUSQUEDA, PAGINACION } from '@/lib/constants';
+import apiClient from '@/lib/api/client';
+import { adaptError, logError } from '@/lib/errors/error.adapter';
 
 // Función de debounce
 function debounce<T extends (...args: any[]) => any>(
@@ -40,40 +42,27 @@ export function useAvailableMembers(idTemporada: string) {
 
     setLoading(true);
     setError(null);
-    
+
     try {
-      // Intentar usar API primero
       const params = new URLSearchParams({
         page: pagina.toString(),
         limit: PAGINACION.TAMAÑO_PAGINA_POR_DEFECTO.toString(),
         ...(busqueda && busqueda.length >= BUSQUEDA.LONGITUD_MINIMA_BUSQUEDA && { search: busqueda })
       });
 
-      const response = await fetch(
-        `/api/socios/disponibles-para-temporada/${idTemporada}?${params}`
-      );
+      const { data } = await apiClient.get<{
+        socios: Socio[];
+        paginacion: Paginacion;
+      }>(`/socios/disponibles-para-temporada/${idTemporada}?${params}`);
 
-      if (response.ok) {
-        // API disponible - usar respuesta real
-        const data = await response.json();
-
-        setSocios(data.socios || []);
-        setPaginacion(data.paginacion || null);
-      } else {
-        // Obtener mensaje de error del backend
-        const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
-        throw new Error(errorData.message || 'Error en la API');
-      }
+      setSocios(data.socios || []);
+      setPaginacion(data.paginacion || null);
     } catch (err) {
-      // Mostrar el mensaje de error tal como viene del backend o del error de red
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
-      setError(errorMessage);
+      const uiError = adaptError(err);
+      setError(uiError.message);
       setSocios([]);
       setPaginacion(null);
-
-      if (process.env.NODE_ENV === 'development') {
-        console.error('[useAvailableMembers.fetchSocios]:', err);
-      }
+      logError(err, 'useAvailableMembers.fetchSocios');
     } finally {
       setLoading(false);
     }

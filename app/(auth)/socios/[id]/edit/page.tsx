@@ -12,6 +12,7 @@ import { MemberForm } from "@/components/member-form";
 import { SocioWithFoto } from "@/lib/types";
 import { useSocioById } from "@/hooks/api/socios/useSocios";
 import { useUpdateSocio } from "@/hooks/api/socios/useUpdateSocio";
+import { logError } from "@/lib/errors/error.adapter";
 
 export default function EditMemberPage() {
   const router = useRouter();
@@ -78,7 +79,8 @@ export default function EditMemberPage() {
       await updateSocio({id: parseInt(id as string), data: formDataToSend});
       router.push("/socios");
     } catch (error) {
-      console.error(error);
+      // El error ya fue mostrado en el hook de API
+      logError(error, "EditMemberPage");
     }
   };
   

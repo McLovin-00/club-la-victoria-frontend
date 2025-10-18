@@ -3,6 +3,7 @@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, CheckCircle } from "lucide-react";
 import { Temporada } from "@/lib/types";
+import { isDatePast, isDateFuture, isDateRangeActive } from "@/lib/utils/date";
 
 interface SeasonStatusAlertProps {
   season: Temporada | undefined;
@@ -11,14 +12,9 @@ interface SeasonStatusAlertProps {
 export function SeasonStatusAlert({ season }: SeasonStatusAlertProps) {
   if (!season) return null;
 
-  const currentDate = new Date();
-  const startDate = new Date(season.fechaInicio);
-  const endDate = new Date(season.fechaFin);
-
-  const hasEnded = currentDate > endDate;
-  const hasStarted = currentDate >= startDate;
-  const isActive = hasStarted && !hasEnded;
-  const isFuture = currentDate < startDate;
+  const hasEnded = isDatePast(season.fechaFin);
+  const isActive = isDateRangeActive(season.fechaInicio, season.fechaFin);
+  const isFuture = isDateFuture(season.fechaInicio);
 
   if (hasEnded) {
     return (

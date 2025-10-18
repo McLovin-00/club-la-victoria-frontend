@@ -3,6 +3,8 @@ import { authService, LoginCredentials } from "@/lib/api/auth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
+import { adaptError, logError } from "@/lib/errors/error.adapter";
+import { ROUTES } from "@/lib/routes";
 
 export const useLogin = () => {
   const queryClient = useQueryClient();
@@ -18,12 +20,14 @@ export const useLogin = () => {
       toast.success("Sesión iniciada correctamente");
 
       // Redirect to dashboard or home after successful login
-      router.push("/socios");
+      router.replace(ROUTES.MEMBERS.LIST);
     },
     onError: (error) => {
-      if (error instanceof AxiosError && !error.response?.data) {
-        toast.error("Error de red");
-      }
+      logError(error, "useCreateSocio");
+      const uiError = adaptError(error);
+      toast.error(uiError.title, {
+        description: uiError.message,
+      });
     },
   });
 };
@@ -41,7 +45,7 @@ export const useLogout = () => {
       // Clear all queries and reset the cache
       queryClient.clear();
       // Redirect to login page after logout
-      router.push("/login");
+      router.replace(ROUTES.LOGIN);
     },
   });
 };

@@ -2,6 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/api/client";
 import { toast } from "sonner";
 import { MENSAJES_EXITO } from "@/lib/constants";
+import { adaptError, logError } from "@/lib/errors/error.adapter";
+import { AxiosError } from "axios";
 
 interface AgregarSocioTemporadaParams {
   socioId: string;
@@ -11,7 +13,11 @@ interface AgregarSocioTemporadaParams {
 export const useAgregarSocioTemporada = () => {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<
+    unknown,
+    AxiosError<{ message: string }>,
+    AgregarSocioTemporadaParams
+  >({
     mutationFn: async ({ socioId, temporadaId }: AgregarSocioTemporadaParams) => {
       const { data } = await apiClient.post(`/temporadas/${temporadaId}/socios`, {
         socioId,
@@ -27,8 +33,11 @@ export const useAgregarSocioTemporada = () => {
       toast.success(MENSAJES_EXITO.ASOCIACION_CREADA);
     },
     onError: (error) => {
-      console.error("Error adding member to season:", error);
-      toast.error("Error al agregar socio a la temporada");
+      logError(error, "useAgregarSocioTemporada");
+      const uiError = adaptError(error);
+      toast.error(uiError.title, {
+        description: uiError.message,
+      });
     },
   });
 };

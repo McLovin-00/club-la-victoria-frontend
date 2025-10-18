@@ -24,7 +24,7 @@ import { SeasonSelector } from "@/components/association/season-selector";
 import { SeasonStatusAlert } from "@/components/association/season-status-alert";
 import { SeasonMemberList } from "@/components/association/season-member-list";
 import { AddMemberDialog } from "@/components/association/add-member-dialog";
-import { formatDateShort } from "@/lib/utils/date";
+import { formatDateShort, isDateRangeActive, isDatePast } from "@/lib/utils/date";
 
 export function AssociationManagement() {
   // Estados para selección de temporada
@@ -51,20 +51,18 @@ export function AssociationManagement() {
 
   // Auto-select current or latest season
   useEffect(() => {
-    const fechaActual = new Date();
     const temporadaActualObj = temporadas.find((temporada) => {
-      const fechaInicio = new Date(temporada.fechaInicio);
-      const fechaFin = new Date(temporada.fechaFin);
-      return fechaActual >= fechaInicio && fechaActual <= fechaFin;
+      return isDateRangeActive(temporada.fechaInicio, temporada.fechaFin);
     });
 
     if (temporadaActualObj?.id) {
       setTemporadaSeleccionada(temporadaActualObj.id);
     } else if (temporadas.length > 0) {
-      const temporadasOrdenadas = [...temporadas].sort(
-        (a, b) =>
-          new Date(b.fechaInicio).getTime() - new Date(a.fechaInicio).getTime()
-      );
+      // Ordenar por fecha de inicio más reciente
+      const temporadasOrdenadas = [...temporadas].sort((a, b) => {
+        // Comparar fechas como strings YYYY-MM-DD (funcionan bien alfabéticamente)
+        return b.fechaInicio.localeCompare(a.fechaInicio);
+      });
       const primeraTemporada = temporadasOrdenadas[0];
       if (primeraTemporada?.id) {
         setTemporadaSeleccionada(primeraTemporada.id);
@@ -78,7 +76,7 @@ export function AssociationManagement() {
 
   // Check if can manage members (future or active seasons)
   const puedeGestionarSocios = temporadaSeleccionadaObj
-    ? new Date() <= new Date(temporadaSeleccionadaObj.fechaFin)
+    ? !isDatePast(temporadaSeleccionadaObj.fechaFin)
     : false;
 
   const handleAgregarSocioATemporada = async (idSocio: string) => {

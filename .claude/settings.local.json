@@ -7,7 +7,11 @@
       "Read(//c/Users/Albo/Desktop/sistema-ingresos-clublavictoria/backend/**)",
       "Bash(npm run lint:*)",
       "Read(//c/Users/Albo/Desktop/sistema-ingresos-clublavictoria/mobile/**)",
-      "mcp__context7__resolve-library-id"
+      "mcp__context7__resolve-library-id",
+      "Bash(test -f \"E:\\Backup\\Programacion\\Club la victoria\\club-la-victoria-frontend\\lib\\error-handler.ts\")",
+      "Bash(npm run build)",
+      "Read(//c/Users/GuguVilla/Pictures/Screenshots/**)",
+      "Bash(npm run lint:fix)"
     ],
     "deny": [],
     "ask": []

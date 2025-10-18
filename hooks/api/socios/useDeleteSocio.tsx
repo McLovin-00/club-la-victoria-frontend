@@ -3,13 +3,13 @@ import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MENSAJES_EXITO } from "@/lib/constants";
 import apiClient from "@/lib/api/client";
-import { AxiosResponse } from "axios";
+import { AxiosError, AxiosResponse } from "axios";
 import { adaptError, logError } from "@/lib/errors/error.adapter";
 
 export const useDeleteSocio = () => {
   const queryClient = useQueryClient();
 
-  const mutation = useMutation<AxiosResponse<void>, unknown, string>({
+  const mutation = useMutation<AxiosResponse<void>, AxiosError<{ message: string }>, string>({
     mutationFn: (id) => apiClient.delete(`/socios/${id}`),
     onSuccess: () => {
       toast.success(MENSAJES_EXITO.SOCIO_ELIMINADO, {

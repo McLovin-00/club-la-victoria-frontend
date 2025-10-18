@@ -4,6 +4,7 @@ import { MENSAJES_EXITO } from "@/lib/constants";
 import apiClient from "@/lib/api/client";
 import { AxiosError, AxiosResponse } from "axios";
 import { Temporada } from "@/lib/types";
+import { adaptError, logError } from "@/lib/errors/error.adapter";
 
 export const useCreateTemporada = () => {
   const queryClient = useQueryClient();
@@ -26,10 +27,11 @@ export const useCreateTemporada = () => {
       queryClient.invalidateQueries({ queryKey: ["temporadas"] });
     },
     onError: (error) => {
-      // TypeScript ya sabe que response.data tiene message
-      const message = error.response?.data?.message ?? "Error al crear socio";
-      toast.error(message);
-      console.error("Error al crear temporada:", error);
+      logError(error, "useCreateTemporada");
+      const uiError = adaptError(error);
+      toast.error(uiError.title, {
+        description: uiError.message,
+      });
     },
   });
 

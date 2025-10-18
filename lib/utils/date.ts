@@ -4,13 +4,15 @@
  */
 
 /**
- * Parse a date string and add timezone offset to avoid timezone issues
+ * Parse a date string without timezone conversion issues
  * @param dateString - Date string in YYYY-MM-DD format
- * @returns Date object with timezone adjustment
+ * @returns Date object representing the exact date without timezone shifts
  */
 function parseDateSafe(dateString: string): Date {
-  // Add T00:00:00 to ensure the date is interpreted in local timezone
-  return new Date(dateString + "T00:00:00");
+  // Parse the date components manually to avoid timezone issues
+  const [year, month, day] = dateString.split("-").map(Number);
+  // Month is 0-indexed in JavaScript Date
+  return new Date(year, month - 1, day);
 }
 
 /**
@@ -136,4 +138,16 @@ export function isDateRangeActive(startDate: string, endDate: string): boolean {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return today >= start && today <= end;
+}
+
+/**
+ * Convert a Date object to YYYY-MM-DD string without timezone conversion
+ * @param date - Date object
+ * @returns Date string in YYYY-MM-DD format (local timezone)
+ */
+export function formatDateToISO(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }

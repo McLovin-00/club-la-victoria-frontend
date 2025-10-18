@@ -2,6 +2,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/api/client";
 import { SocioWithFoto } from "@/lib/types";
 import { useMemo } from "react";
+import { STALE_TIME } from "@/lib/constants";
 
 interface SociosDisponiblesParams {
   temporadaId: string;
@@ -31,16 +32,16 @@ export const useSociosDisponiblesInfinite = ({
     queryFn: async ({ pageParam = 1 }: { pageParam: unknown }) => {
       const page = pageParam as number;
       if (!temporadaId) {
-        return { 
-          socios: [], 
-          paginacion: { 
-            paginaActual: 1, 
-            totalPaginas: 0, 
-            totalElementos: 0, 
-            elementosPorPagina: limit, 
-            tieneSiguientePagina: false, 
-            tieneAnteriorPagina: false 
-          } 
+        return {
+          socios: [],
+          paginacion: {
+            paginaActual: 1,
+            totalPaginas: 0,
+            totalElementos: 0,
+            elementosPorPagina: limit,
+            tieneSiguientePagina: false,
+            tieneAnteriorPagina: false
+          }
         };
       }
 
@@ -57,6 +58,7 @@ export const useSociosDisponiblesInfinite = ({
       return response.data;
     },
     enabled: !!temporadaId,
+    staleTime: STALE_TIME,
     getNextPageParam: (lastPage) => {
       if (lastPage.paginacion.tieneSiguientePagina) {
         return lastPage.paginacion.paginaActual + 1;

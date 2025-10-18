@@ -130,6 +130,7 @@ export function toUiError(apiError: ApiError): UiError {
  * Esta es la función que debes usar en tus hooks y componentes
  */
 export function adaptError(error: unknown): UiError {
+  console.log("adaptError", error);
   const apiError = parseApiError(error);
   return toUiError(apiError);
 }

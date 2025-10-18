@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/api/client";
 import { SocioWithFoto } from "@/lib/types";
+import { STALE_TIME } from "@/lib/constants";
 
 export interface SocioTemporada {
   id: number;
@@ -17,5 +18,6 @@ export const useSociosTemporada = (temporadaId: string) => {
       return data;
     },
     enabled: !!temporadaId,
+    staleTime: STALE_TIME,
   });
 };

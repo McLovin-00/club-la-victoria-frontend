@@ -23,7 +23,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { toast } from "sonner";
 import { Temporada } from "@/lib/types";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useTemporadas } from "@/hooks/api/temporadas/useTemporadas";
@@ -55,8 +54,8 @@ export function SeasonManagement() {
     try {
       await createTemporada(temporada);
       setIsCreateDialogOpen(false);
-    } catch (error) {
-      console.error(error);
+    } catch {
+      // El error ya fue mostrado en el hook de API
     }
   };
 
@@ -73,17 +72,16 @@ export function SeasonManagement() {
         await updateTemporada({ id: parseInt(editingTemporada.id), data: temporada });
       }
       setEditingTemporada(null);
-    } catch (error) {
-      console.error(error);
+    } catch {
+      // El error ya fue mostrado en el hook de API
     }
   };
 
   const handleEliminarTemporada = async (idTemporada: string) => {
     try {
       await deleteTemporada({ id: parseInt(idTemporada) });
-    } catch (error) {
-      console.error(error);
-      toast.error("Error al eliminar temporada");
+    } catch {
+      // El error ya fue mostrado en el hook de API
     }
   };
 

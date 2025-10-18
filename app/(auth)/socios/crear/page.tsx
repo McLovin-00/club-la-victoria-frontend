@@ -11,6 +11,8 @@ import { PhotoCropper } from "@/components/photo-cropper";
 import { MemberForm } from "@/components/member-form";
 import { Socio } from "@/lib/types";
 import { useCreateSocio } from "@/hooks/api/socios/useCreateSocio";
+import { logError } from "@/lib/errors/error.adapter";
+import { ROUTES } from "@/lib/routes";
 
 export default function CreateMemberPage() {
   const router = useRouter();
@@ -43,9 +45,10 @@ export default function CreateMemberPage() {
     }
     try {
       await createSocio(formDataToSend); // <-- aquí sí se puede await
-      router.push("/socios"); // redirige después de éxito
+      router.push(ROUTES.MEMBERS.LIST); // redirige después de éxito
     } catch (error) {
-      console.error(error); // ya se mostró toast dentro del hook
+      // El error ya fue mostrado en el hook de API
+      logError(error, "CreateMemberPage");
     }
   };
 

@@ -4,6 +4,7 @@ import { MENSAJES_EXITO } from "@/lib/constants";
 import apiClient from "@/lib/api/client";
 import { AxiosError, AxiosResponse } from "axios";
 import { SocioWithFoto, Temporada } from "@/lib/types";
+import { adaptError, logError } from "@/lib/errors/error.adapter";
 
 export const useUpdateTemporada = () => {
   const queryClient = useQueryClient();
@@ -25,9 +26,11 @@ export const useUpdateTemporada = () => {
       queryClient.invalidateQueries({ queryKey: ["temporadas"] });
     },
     onError: (error) => {
-      const message = error.response?.data?.message ?? "Error al crear temporada";
-      toast.error(message);
-      console.error("Error al actualizar temporada:", error);
+      logError(error, "useUpdateTemporada");
+      const uiError = adaptError(error);
+      toast.error(uiError.title, {
+        description: uiError.message,
+      });
     },
   });
 

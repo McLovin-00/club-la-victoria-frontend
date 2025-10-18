@@ -47,9 +47,8 @@ export const temporadaSchema = z
   // Validación a nivel de objeto: fechaFin > fechaInicio
   .refine(
     (data) => {
-      const inicio = new Date(data.fechaInicio);
-      const fin = new Date(data.fechaFin);
-      return fin > inicio;
+      // Comparar como strings YYYY-MM-DD (funciona alfabéticamente)
+      return data.fechaFin > data.fechaInicio;
     },
     {
       message: MENSAJES_ERROR.ORDEN_FECHAS_INVALIDO,

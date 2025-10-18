@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { UserCheck, X } from "lucide-react"
 import { Socio, Temporada, Asociacion } from "@/lib/types"
 import { ESTADO_SOCIO, ESTADO_ASOCIACION, MENSAJES_ERROR } from "@/lib/constants"
-import { formatDateNumeric } from "@/lib/utils/date"
+import { formatDateNumeric, isDatePast } from "@/lib/utils/date"
 
 interface AssociationFormProps {
   socios: Socio[]
@@ -26,11 +26,9 @@ export function AssociationForm({ socios, temporadas, asociacionesExistentes, on
 
   // Filter active socios and available temporadas (current and future)
   const sociosActivos = socios.filter((socio) => socio.estado === ESTADO_SOCIO.ACTIVO)
-  const hoy = new Date()
-  hoy.setHours(0, 0, 0, 0)
   const temporadasDisponibles = temporadas.filter((temporada) => {
-    const fechaFin = new Date(temporada.fechaFin + "T00:00:00")
-    return fechaFin >= hoy
+    // Solo mostrar temporadas que no hayan finalizado (fechaFin no es pasado)
+    return !isDatePast(temporada.fechaFin)
   })
 
   const validarFormulario = () => {

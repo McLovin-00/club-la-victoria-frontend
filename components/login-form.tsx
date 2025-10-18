@@ -1,39 +1,43 @@
 "use client";
 
-import type React from "react";
-
 import { useState } from "react";
-import { AxiosError } from "axios";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeOff, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLogin } from "@/hooks/useAuth";
+import { loginSchema, type LoginFormData } from "@/lib/schemas/login.schema";
+import { adaptError } from "@/lib/errors/error.adapter";
+import { toast } from "sonner";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 
 export function LoginForm() {
-  const [usuario, setUsuario] = useState("");
-  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState("");
   const { mutateAsync: loginMutation, isPending } = useLogin();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+  const form = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      usuario: '',
+      password: '',
+    },
+  });
 
-    if (!usuario || !password) {
-      setError("Por favor ingresa usuario y contraseña");
-      return;
-    }
-
+  const onSubmit = async (data: LoginFormData) => {
     try {
-      await loginMutation({ usuario, password });
-    } catch (err) {
-      if (err instanceof AxiosError) {
-        setError(err.response?.data.message);
-      }
+      await loginMutation(data);
+    } catch (error) {
+      const uiError = adaptError(error);
+      toast.error(uiError.title, { description: uiError.message });
     }
   };
 
@@ -45,78 +49,82 @@ export function LoginForm() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username" className="text-foreground">
-              Username
-            </Label>
-            <Input
-              id="username"
-              type="username"
-              placeholder="Ingrese su nombre de usuario."
-              value={usuario}
-              onChange={(e) => setUsuario(e.target.value)}
-              required
-              disabled={isPending}
-              className="rounded-lg border-border focus:ring-primary focus:border-primary"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="usuario"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-foreground">Username</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      placeholder="Ingrese su nombre de usuario."
+                      disabled={isPending}
+                      className="rounded-lg border-border focus:ring-primary focus:border-primary"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-foreground">
-              Contraseña
-            </Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={isPending}
-                className="rounded-lg border-border focus:ring-primary focus:border-primary pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                )}
-              </Button>
-            </div>
-          </div>
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-foreground">Contraseña</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        disabled={isPending}
+                        className="rounded-lg border-border focus:ring-primary focus:border-primary pr-10"
+                        {...field}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          {error && (
-            <Alert variant="destructive" className="rounded-lg">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <Button
-            type="submit"
-            className="w-full rounded-lg bg-primary hover:bg-primary/85 text-primary-foreground font-medium"
-            disabled={isPending}
-          >
-            {isPending ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                Iniciando sesión...
-              </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <LogIn className="w-4 h-4" />
-                Iniciar Sesión
-              </div>
-            )}
-          </Button>
-        </form>
+            <Button
+              type="submit"
+              className="w-full rounded-lg bg-primary hover:bg-primary/85 text-primary-foreground font-medium"
+              disabled={isPending}
+            >
+              {isPending ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
+                  Iniciando sesión...
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <LogIn className="w-4 h-4" />
+                  Iniciar Sesión
+                </div>
+              )}
+            </Button>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );

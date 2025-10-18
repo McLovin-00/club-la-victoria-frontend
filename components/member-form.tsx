@@ -18,6 +18,7 @@ import { Save, X } from "lucide-react";
 import { Socio, SocioWithFoto } from "@/lib/types";
 import { ESTADO_SOCIO, GENERO } from "@/lib/constants";
 import { socioSchema, type SocioFormData } from "@/lib/schemas/socio.schema";
+import { formatDateToISO } from "@/lib/utils/date";
 
 interface MemberFormProps {
   socio?: Socio;
@@ -26,16 +27,23 @@ interface MemberFormProps {
   isSubmitting?: boolean;
 }
 
-// Helper para normalizar fechas
+// Helper para normalizar fechas sin conversión de zona horaria
 const normalizeDate = (date?: string | Date | null): string => {
   if (!date) return "";
-  if (date instanceof Date) {
-    return date.toISOString().slice(0, 10);
+
+  // Si ya es un string en formato YYYY-MM-DD, devolverlo tal cual
+  if (typeof date === "string") {
+    // Validar que sea un formato de fecha válido
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return date;
+    }
   }
-  const isoDate = new Date(date);
-  if (!isNaN(isoDate.getTime())) {
-    return isoDate.toISOString().slice(0, 10);
+
+  // Si es un objeto Date, usar nuestra función sin conversión UTC
+  if (date instanceof Date && !isNaN(date.getTime())) {
+    return formatDateToISO(date);
   }
+
   return "";
 };
 

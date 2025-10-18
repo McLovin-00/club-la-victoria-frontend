@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MENSAJES_EXITO } from "@/lib/constants";
 import apiClient from "@/lib/api/client";
-import { AxiosResponse } from "axios";
+import { AxiosError, AxiosResponse } from "axios";
 import { SocioWithFoto } from "@/lib/types";
 import { adaptError, logError } from "@/lib/errors/error.adapter";
 
@@ -12,7 +12,7 @@ export const useUpdateSocio = () => {
 
   const mutation = useMutation<
     AxiosResponse<SocioWithFoto>,
-    unknown,
+    AxiosError<{ message: string }>,
     { id: number; data: FormData }
   >({
     mutationFn: ({ id, data }) => apiClient.put(`/socios/${id}`, data),
