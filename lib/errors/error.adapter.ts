@@ -32,6 +32,7 @@ export function parseApiError(error: unknown): ApiError {
     // Intentar extraer código de error
     const code = isValidBackendCode(data.code) ? data.code : "ERR_UNKNOWN";
 
+    // SIEMPRE usar el mensaje del backend cuando está disponible
     return {
       status,
       code,
@@ -115,9 +116,10 @@ export function toUiError(apiError: ApiError): UiError {
     actionable = true; // Usuario puede reintentar
   }
 
+  // Usar SIEMPRE el mensaje del backend (ya viene en apiError.message)
   return {
     title: ERROR_TITLES[variant],
-    message: ERROR_MESSAGES[code] || apiError.message,
+    message: apiError.message, // El mensaje ya viene del backend en parseApiError
     variant,
     actionable,
   };

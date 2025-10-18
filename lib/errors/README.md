@@ -44,13 +44,25 @@ export const useCreateSocio = () => {
     onError: (error) => {
       logError(error, "useCreateSocio");
       const uiError = adaptError(error);
+      // uiError.message contiene el mensaje exacto del backend
       toast.error(uiError.title, {
-        description: uiError.message,
+        description: uiError.message, // <- Mensaje del backend
       });
     },
   });
 };
 ```
+
+**Ejemplo de respuesta del backend:**
+```json
+{
+  "statusCode": 400,
+  "message": "Ya existe un socio con este DNI",
+  "code": "ERR_DNI_EXISTS"
+}
+```
+
+El frontend mostrará: "Ya existe un socio con este DNI" (mensaje exacto del backend)
 
 ### En componentes con React Hook Form
 
@@ -81,14 +93,12 @@ const onSubmit = async (data) => {
 
 ## Sincronización con Backend
 
-Los códigos de error están sincronizados con:
-```
-backend/src/constants/errors/error-messages.ts
-```
+Los mensajes de error se obtienen directamente del backend. El frontend muestra los mensajes exactos que envía el backend.
 
-**IMPORTANTE**: Si se agregan nuevos códigos en el backend, deben agregarse aquí también:
-1. Actualizar `BackendErrorCode` en `error.types.ts`
-2. Agregar mensaje en español en `error-messages.ts`
+**IMPORTANTE**:
+- Los mensajes de error vienen del backend en `response.data.message`
+- Los mensajes en `error-messages.ts` solo se usan como fallback para errores de red o cuando el backend no envía mensaje
+- Si se agregan nuevos códigos en el backend, actualizar `BackendErrorCode` en `error.types.ts`
 
 ## Ventajas
 

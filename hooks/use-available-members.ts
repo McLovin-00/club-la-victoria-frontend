@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 // Importar tipos y utilidades centralizadas
 import { Socio, RespuestaBusqueda, Paginacion } from '@/lib/types';
 import { BUSQUEDA, PAGINACION } from '@/lib/constants';
-import { handleFetchError, handleNetworkError, validateApiResponse, logError } from '@/lib/error-handler';
 
 // Función de debounce
 function debounce<T extends (...args: any[]) => any>(
@@ -57,20 +56,24 @@ export function useAvailableMembers(idTemporada: string) {
       if (response.ok) {
         // API disponible - usar respuesta real
         const data = await response.json();
-        const validatedData = validateApiResponse<RespuestaBusqueda>(data);
-        
-        setSocios(validatedData.socios || []);
-        setPaginacion(validatedData.paginacion || null);
+
+        setSocios(data.socios || []);
+        setPaginacion(data.paginacion || null);
       } else {
-        // API no disponible - mostrar error
-        throw new Error('API endpoint not available');
+        // Obtener mensaje de error del backend
+        const errorData = await response.json().catch(() => ({ message: 'Error desconocido' }));
+        throw new Error(errorData.message || 'Error en la API');
       }
     } catch (err) {
-      const errorMessage = handleNetworkError(err);
+      // Mostrar el mensaje de error tal como viene del backend o del error de red
+      const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
       setError(errorMessage);
       setSocios([]);
       setPaginacion(null);
-      logError(err, 'useAvailableMembers.fetchSocios');
+
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[useAvailableMembers.fetchSocios]:', err);
+      }
     } finally {
       setLoading(false);
     }
