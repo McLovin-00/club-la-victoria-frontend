@@ -95,7 +95,6 @@ export function AssociationManagement() {
       await generateSociosPdf(temporadaSeleccionadaObj ?? { id: temporadaSeleccionada }, sociosTemporada as any);
       toast.success("PDF generado correctamente");
     } catch (error) {
-      console.error(error);
       toast.error("Error generando el PDF");
     } finally {
       setIsExporting(false);

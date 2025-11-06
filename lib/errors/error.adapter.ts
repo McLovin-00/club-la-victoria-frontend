@@ -130,7 +130,6 @@ export function toUiError(apiError: ApiError): UiError {
  * Esta es la función que debes usar en tus hooks y componentes
  */
 export function adaptError(error: unknown): UiError {
-  console.log("adaptError", error);
   const apiError = parseApiError(error);
   return toUiError(apiError);
 }
@@ -140,18 +139,10 @@ export function adaptError(error: unknown): UiError {
  */
 export function logError(error: unknown, context?: string): void {
   if (process.env.NODE_ENV === "development") {
-    console.group(`🚨 Error${context ? ` [${context}]` : ""}`);
-    console.error("Original error:", error);
-
+    // Logging removed: console statements were removed across the app.
+    // Keep parsing to ensure any side-effects (none expected here).
     const apiError = parseApiError(error);
-    console.table({
-      Status: apiError.status,
-      Code: apiError.code,
-      Message: apiError.message,
-      Timestamp: apiError.timestamp.toISOString(),
-    });
-
-    console.groupEnd();
+    void apiError;
   }
 
   // TODO: En producción, enviar a servicio de logging (Sentry, etc.)

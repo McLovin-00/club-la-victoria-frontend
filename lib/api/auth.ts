@@ -36,7 +36,7 @@ export const authService = {
     // Basic validation: a JWT must have three parts separated by dots
     const parts = token.split(".");
     if (parts.length !== 3) {
-      console.warn("Invalid token format: not a JWT");
+      // invalid token format (not a JWT) - console logging removed
       this.logout();
       return false;
     }
@@ -54,8 +54,7 @@ export const authService = {
 
       return true;
     } catch (error) {
-      // Keep a concise log but avoid noisy stack traces in normal flow
-      console.warn("Error validating token:", (error as Error).message ?? error);
+      // Error validating token - console logging removed
       this.logout();
       return false;
     }

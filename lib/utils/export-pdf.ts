@@ -34,7 +34,6 @@ export async function generateSociosPdf(
 ): Promise<void> {
   // Import dinámico
   const { jsPDF } = await import("jspdf");
-  // @ts-ignore - el package side-effect registra autoTable
   await import("jspdf-autotable");
 
   const doc = new jsPDF({ unit: "pt", format: "a4" });

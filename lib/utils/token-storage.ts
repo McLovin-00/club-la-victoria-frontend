@@ -22,7 +22,7 @@ export const setToken = (token: string): void => {
   try {
     localStorage.setItem(TOKEN_KEY, token);
   } catch (error) {
-    console.error('Error storing token:', error);
+    // error storing token - removed console logging
   }
 };
 
@@ -36,7 +36,7 @@ export const getToken = (): string | null => {
   try {
     return localStorage.getItem(TOKEN_KEY);
   } catch (error) {
-    console.error('Error retrieving token:', error);
+    // error retrieving token - removed console logging
     return null;
   }
 };
@@ -50,7 +50,7 @@ export const removeToken = (): void => {
   try {
     localStorage.removeItem(TOKEN_KEY);
   } catch (error) {
-    console.error('Error removing token:', error);
+    // error removing token - removed console logging
   }
 };
 
