@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { authService, LoginCredentials } from "@/lib/api/auth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { AxiosError } from "axios";
 import { adaptError, logError } from "@/lib/errors/error.adapter";
 import { ROUTES } from "@/lib/routes";
 

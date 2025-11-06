@@ -14,7 +14,6 @@ export const useSociosTemporada = (temporadaId: string) => {
     queryFn: async () => {
       if (!temporadaId) return [];
       const { data } = await apiClient.get<SocioTemporada[]>(`/temporadas/${temporadaId}/socios`);
-      console.log(data);
       return data;
     },
     enabled: !!temporadaId,

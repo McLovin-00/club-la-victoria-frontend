@@ -9,7 +9,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Users } from "lucide-react";
+import { Users, Download, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 // Import types and constants
 import { PAGINACION } from "@/lib/constants";
@@ -73,6 +75,32 @@ export function AssociationManagement() {
   const temporadaSeleccionadaObj = temporadas.find(
     (temporada) => temporada.id === temporadaSeleccionada
   );
+
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportPdf = async () => {
+    if (!temporadaSeleccionada) {
+      toast.error("Seleccioná una temporada antes de exportar");
+      return;
+    }
+
+    if (!sociosTemporada || sociosTemporada.length === 0) {
+      toast.error("No hay socios para exportar en esta temporada");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const { default: generateSociosPdf } = await import("@/lib/utils/export-pdf");
+      await generateSociosPdf(temporadaSeleccionadaObj ?? { id: temporadaSeleccionada }, sociosTemporada as any);
+      toast.success("PDF generado correctamente");
+    } catch (error) {
+      console.error(error);
+      toast.error("Error generando el PDF");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Check if can manage members (future or active seasons)
   const puedeGestionarSocios = temporadaSeleccionadaObj
@@ -148,6 +176,28 @@ export function AssociationManagement() {
               <CardDescription>
                 Administra los socios asociados a cada temporada
               </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    onClick={handleExportPdf}
+                    disabled={!temporadaSeleccionada || isExporting || sociosTemporada.length === 0}
+                    size="sm"
+                    variant="secondary"
+                    className="flex items-center gap-2 transform hover:scale-105 hover:shadow-md transition-all duration-150"
+                    aria-label="Exportar socios a PDF"
+                  >
+                    {isExporting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    <span className="hidden sm:inline">{isExporting ? "Exportando" : "Exportar PDF"}</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent sideOffset={6}>Exportar todos los socios de la temporada a PDF</TooltipContent>
+              </Tooltip>
             </div>
           </div>
         </CardHeader>

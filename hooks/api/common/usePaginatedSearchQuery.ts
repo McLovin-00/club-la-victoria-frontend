@@ -43,8 +43,19 @@ export function usePaginatedSearchQuery<T>({
   }, []);
 
   const query = useQuery<PaginatedResponse<T>>({
-    queryKey: [queryKey, page, limit, searchTerm],
+    queryKey: [queryKey, url, page, limit, searchTerm],
     queryFn: async () => {
+      // If no url provided, return an empty paginated response to avoid
+      // sending a request to the baseURL (e.g. `/api/v1?page=1&limit=10`).
+      if (!url) {
+        return {
+          data: [],
+          total: 0,
+          page,
+          limit,
+        } as PaginatedResponse<T>;
+      }
+
       const { data } = await apiClient.get<PaginatedResponse<T>>(url, {
         params: {
           page,
@@ -54,6 +65,7 @@ export function usePaginatedSearchQuery<T>({
       });
       return data;
     },
+    enabled: !!url,
     staleTime: STALE_TIME,
     placeholderData: (previousData) => previousData,
   });

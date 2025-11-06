@@ -33,20 +33,29 @@ export const authService = {
     const token = this.getToken();
     if (!token) return false;
 
-    try {
-      // Decode the token to check expiration
-      const decoded = jwtDecode<{ exp: number }>(token);
-      const isExpired = decoded.exp * 1000 < Date.now();
+    // Basic validation: a JWT must have three parts separated by dots
+    const parts = token.split(".");
+    if (parts.length !== 3) {
+      console.warn("Invalid token format: not a JWT");
+      this.logout();
+      return false;
+    }
 
-      // If token is expired, remove it
-      if (isExpired) {
-        this.logout();
-        return false;
+    try {
+      // Decode the token to check expiration (exp is optional)
+      const decoded = jwtDecode<{ exp?: number }>(token);
+      if (decoded && typeof decoded.exp === "number") {
+        const isExpired = decoded.exp * 1000 < Date.now();
+        if (isExpired) {
+          this.logout();
+          return false;
+        }
       }
 
       return true;
     } catch (error) {
-      console.error("Error validating token:", error);
+      // Keep a concise log but avoid noisy stack traces in normal flow
+      console.warn("Error validating token:", (error as Error).message ?? error);
       this.logout();
       return false;
     }
