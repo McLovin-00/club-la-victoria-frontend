@@ -15,7 +15,7 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'clublavictoria.com.ar',
+        hostname: 'www.clublavictoria.com.ar',
       }
     ],
   },

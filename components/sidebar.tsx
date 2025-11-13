@@ -33,7 +33,7 @@ export function Sidebar({ onClose }: SidebarProps) {
         <div className="flex items-center gap-3">
           <Image
             alt="Logo"
-            src="https://clublavictoria.com.ar/static/media/logo.6dafc533b0491900e9a6.png"
+            src="https://www.clublavictoria.com.ar/assets/logo-DGcyiAEh.webp"
             width={32}
             height={32}
           />

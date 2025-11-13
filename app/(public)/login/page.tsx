@@ -11,7 +11,7 @@ export default function LoginPage() {
           <div className="text-center mb-8 flex flex-col items-center">
             <Image
               alt="Logo"
-              src="https://clublavictoria.com.ar/static/media/logo.6dafc533b0491900e9a6.png"
+              src="https://www.clublavictoria.com.ar/assets/logo-DGcyiAEh.webp"
               width={72}
               height={48}
               className="mb-4"
