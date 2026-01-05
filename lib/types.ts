@@ -101,6 +101,8 @@ export interface RegistroIngreso {
   idIngreso: number;
   idSocio?: number;
   dniNoSocio?: string;
+  nombreNoSocio?: string;
+  apellidoNoSocio?: string;
   tipoIngreso: TipoIngreso;
   habilitaPileta: boolean;
   metodoPago?: MetodoPago;

@@ -4,7 +4,7 @@
 export enum GENERO {
   MASCULINO = 'MASCULINO',
   FEMENINO = 'FEMENINO'
-} 
+}
 
 // Estados de socios
 export enum ESTADO_SOCIO {
@@ -32,9 +32,9 @@ export const ESTADO_ASOCIACION = {
 // Configuración de paginación
 export const PAGINACION = {
   TAMAÑO_PAGINA_POR_DEFECTO: 10,
-  TAMAÑO_PAGINA_MAXIMO: 50,
+  TAMAÑO_PAGINA_MAXIMO: 100,
   TAMAÑO_PAGINA_MINIMO: 5,
-  OPCIONES_TAMAÑO_PAGINA: [5, 10, 20, 50]
+  OPCIONES_TAMAÑO_PAGINA: [5, 10, 25, 50, 100]
 } as const;
 
 // Configuración de búsqueda
