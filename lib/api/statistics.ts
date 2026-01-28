@@ -2,10 +2,11 @@ import apiClient from "./client";
 import { StatisticsResponseDto } from "@/lib/types";
 
 export async function getDailyStats(
-  date: string
+  date: string,
+  searchTerm?: string,
 ): Promise<StatisticsResponseDto> {
   const response = await apiClient.get<StatisticsResponseDto>("/statistics", {
-    params: { date },
+    params: { date, searchTerm },
   });
   return response.data;
 }

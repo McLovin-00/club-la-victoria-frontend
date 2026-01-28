@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { StatCard } from "@/components/ui/stat-card";
 import {
   Users,
@@ -17,6 +18,7 @@ import {
   ChevronRight,
   Filter,
   X,
+  Search,
 } from "lucide-react";
 import { useDailyStats } from "@/hooks/use-daily-stats";
 import { usePagination } from "@/hooks/use-pagination";
@@ -40,20 +42,42 @@ export function StatisticsView() {
   const [filtroMetodoPago, setFiltroMetodoPago] = useState<string>("TODOS");
   const [filtroPileta, setFiltroPileta] = useState<string>("TODOS");
 
+  // Estados para búsqueda
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>("");
+
   const {
     data: statistics,
     isLoading,
     error,
     refetch,
     isRefetching,
-  } = useDailyStats(selectedDate ? formatDateToISO(selectedDate) : formatDateToISO(new Date()));
+  } = useDailyStats(
+    selectedDate ? formatDateToISO(selectedDate) : formatDateToISO(new Date()),
+    debouncedSearchTerm,
+  );
 
   const handleRefresh = () => {
     refetch();
   };
 
+  // Debounce para el término de búsqueda
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchTerm(searchTerm);
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchTerm]);
+
   // Verificar si hay filtros activos
-  const hayFiltrosActivos = filtroTipoIngreso !== "TODOS" || filtroMetodoPago !== "TODOS" || filtroPileta !== "TODOS";
+  const hayFiltrosActivos =
+    filtroTipoIngreso !== "TODOS" ||
+    filtroMetodoPago !== "TODOS" ||
+    filtroPileta !== "TODOS" ||
+    debouncedSearchTerm !== "";
 
   // Limpiar todos los filtros
   const limpiarFiltros = () => {
@@ -128,6 +152,8 @@ export function StatisticsView() {
     setCalendarKey(Date.now()); // Forzar re-render del calendario
     pagination.setCurrentPage(1);
     limpiarFiltros();
+    setSearchTerm("");
+    setDebouncedSearchTerm("");
   };
 
   if (error) {
@@ -257,6 +283,27 @@ export function StatisticsView() {
                   <span className="text-sm font-semibold">Filtrar por:</span>
                 </div>
 
+                {/* Buscador por nombre y apellido */}
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    type="text"
+                    placeholder="Buscar por nombre y apellido..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 pr-8 h-10"
+                  />
+                  {searchTerm && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchTerm("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-1"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+
                 {/* Filtro por tipo de ingreso */}
                 <div className="flex items-center gap-2 bg-background rounded-lg px-3 py-2 border border-border shadow-sm">
                   <Users className="h-4 w-4 text-muted-foreground" />
@@ -329,11 +376,16 @@ export function StatisticsView() {
 
               {/* Indicador de resultados filtrados */}
               {hayFiltrosActivos && (
-                <div className="mt-3 flex items-center gap-2">
+                <div className="mt-3 flex flex-wrap items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                   <span className="text-sm text-muted-foreground">
                     Mostrando <span className="font-semibold text-foreground">{registrosFiltrados.length}</span> de{" "}
                     <span className="font-semibold text-foreground">{statistics?.registros.length || 0}</span> registros
+                    {debouncedSearchTerm && (
+                      <span className="ml-1">
+                        · Buscando: <span className="font-semibold text-primary">"{debouncedSearchTerm}"</span>
+                      </span>
+                    )}
                   </span>
                 </div>
               )}
