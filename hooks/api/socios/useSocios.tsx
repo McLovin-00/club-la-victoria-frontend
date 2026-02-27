@@ -22,6 +22,7 @@ export const useSocios = () => {
 export const useSocioById = (id: number) => {
   return useQuery({
     queryKey: ["socio", id],
+    enabled: Number.isInteger(id) && id > 0,
     queryFn: async () => {
       const { data } = await apiClient.get<SocioWithFoto>(`/socios/${id}`);
       return data;
