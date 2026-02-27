@@ -101,10 +101,43 @@ export const socioSchema = z.object({
     errorMap: () => ({ message: MENSAJES_ERROR.CAMPO_REQUERIDO }),
   }),
 
+  // Override manual de categoría - opcional
+  overrideManual: z.boolean().optional(),
+
+  // Categoría del socio - opcional
+  categoriaId: z.preprocess(
+    (value) => {
+      if (value === "" || value === null || value === undefined) {
+        return undefined;
+      }
+
+      if (typeof value === "string") {
+        const parsedValue = Number(value);
+        return Number.isNaN(parsedValue) ? undefined : parsedValue;
+      }
+
+      return value;
+    },
+    z.number().int().positive().optional()
+  ),
+
+  // Categoría del socio (nombre)
+  categoria: z.string().optional(),
+
+  // Fecha de alta - opcional
+  fechaAlta: z.string().optional(),
+
   // Foto URL - opcional
   fotoUrl: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.overrideManual && !data.categoriaId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["categoriaId"],
+      message: MENSAJES_ERROR.CAMPO_REQUERIDO,
+    });
+  }
 });
-
 // Tipo inferido del schema
 export type SocioFormData = z.infer<typeof socioSchema>;
 

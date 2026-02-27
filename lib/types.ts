@@ -12,9 +12,29 @@ export interface Socio {
   telefono?: string;
   fechaNacimiento?: string;
   fechaIngreso?: string;
+  fechaAlta?: string;
   direccion: string;
   estado: ESTADO_SOCIO;
   genero: GENERO;
+  overrideManual?: boolean;
+  categoriaId?: number;
+  categoria?: CategoriaSocioResumen | null;
+  categoriaNombre?: string;
+  nombreCategoria?: string;
+}
+
+export interface CategoriaSocioResumen {
+  id: number;
+  nombre: string;
+}
+
+// Interfaz completa para categoría de socio
+export interface CategoriaSocio {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  puntos: number;
+  color?: string;
 }
 
 export interface SocioWithFoto extends Socio {
