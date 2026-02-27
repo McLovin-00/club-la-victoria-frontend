@@ -1,10 +1,12 @@
 "use client";
 
 import type React from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -19,12 +21,14 @@ import { Socio, SocioWithFoto } from "@/lib/types";
 import { ESTADO_SOCIO, GENERO } from "@/lib/constants";
 import { socioSchema, type SocioFormData } from "@/lib/schemas/socio.schema";
 import { formatDateToISO } from "@/lib/utils/date";
+import { useCategorias } from "@/hooks/api/categorias/useCategorias";
 
 interface MemberFormProps {
   socio?: Socio;
-  onSubmit: (socio: Omit<Socio, "id">) => void;
+  onSubmit: (socio: SocioFormData) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
+  showCategorySelector?: boolean;
 }
 
 // Helper para normalizar fechas sin conversión de zona horaria
@@ -47,12 +51,50 @@ const normalizeDate = (date?: string | Date | null): string => {
   return "";
 };
 
+const resolveSocioCategoryId = (socio?: Socio): number | undefined => {
+  if (typeof socio?.categoriaId === "number") {
+    return socio.categoriaId;
+  }
+
+  if (
+    socio?.categoria &&
+    typeof socio.categoria !== "string" &&
+    typeof socio.categoria.id === "number"
+  ) {
+    return socio.categoria.id;
+  }
+
+  return undefined;
+};
+
+const resolveSocioCategoryName = (socio?: Socio): string => {
+  if (socio?.categoria && typeof socio.categoria !== "string" && socio.categoria.nombre) {
+    return socio.categoria.nombre;
+  }
+
+  if (socio?.categoriaNombre) {
+    return socio.categoriaNombre;
+  }
+
+  if (socio?.nombreCategoria) {
+    return socio.nombreCategoria;
+  }
+
+  return "Sin categoría";
+};
+
 export function MemberForm({
   socio,
   onSubmit,
   onCancel,
   isSubmitting,
+  showCategorySelector = false,
 }: MemberFormProps) {
+  const [isOverrideConfirmationOpen, setIsOverrideConfirmationOpen] =
+    useState(false);
+  const { data: categorias = [] } = useCategorias(true);
+  const categoriaIdInicial = resolveSocioCategoryId(socio);
+
   const {
     register,
     handleSubmit,
@@ -72,6 +114,8 @@ export function MemberForm({
       fechaNacimiento: normalizeDate(socio?.fechaNacimiento) || "",
       genero: socio?.genero || GENERO.MASCULINO,
       estado: socio?.estado || ESTADO_SOCIO.ACTIVO,
+      overrideManual: socio?.overrideManual ?? false,
+      categoriaId: categoriaIdInicial,
       fotoUrl: (socio as SocioWithFoto)?.fotoUrl || undefined,
     },
   });
@@ -89,6 +133,8 @@ export function MemberForm({
         fechaNacimiento: normalizeDate(socio.fechaNacimiento),
         genero: socio.genero,
         estado: socio.estado,
+        overrideManual: socio.overrideManual ?? false,
+        categoriaId: resolveSocioCategoryId(socio),
         fotoUrl: (socio as SocioWithFoto)?.fotoUrl || undefined,
       });
     }
@@ -96,9 +142,49 @@ export function MemberForm({
 
   const generoValue = watch("genero");
   const estadoValue = watch("estado");
+  const overrideManualValue = watch("overrideManual") ?? false;
+  const categoriaIdValue = watch("categoriaId");
+
+  const categoriasVisibles = overrideManualValue
+    ? categorias
+    : categorias.filter((categoria) => categoria.nombre !== "HONORARIO");
+
+  const categoriaSeleccionada = categorias.find(
+    (categoria) => categoria.id === categoriaIdValue
+  );
+  const nombreCategoriaReadonly = categoriaSeleccionada?.nombre || resolveSocioCategoryName(socio);
+
+  const confirmEnableOverride = () => {
+    setValue("overrideManual", true, { shouldDirty: true, shouldValidate: true });
+
+    if (!categoriaIdValue) {
+      const categoriaFallback = resolveSocioCategoryId(socio);
+      if (categoriaFallback) {
+        setValue("categoriaId", categoriaFallback, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }
+    }
+  };
+
+  const handleOverrideChange = (checked: boolean) => {
+    if (checked && !overrideManualValue) {
+      setIsOverrideConfirmationOpen(true);
+      return;
+    }
+
+    if (!checked) {
+      setValue("overrideManual", false, { shouldDirty: true, shouldValidate: true });
+      setValue("categoriaId", undefined, { shouldDirty: true, shouldValidate: true });
+    }
+  };
 
   const handleFormSubmit = (data: SocioFormData) => {
-    onSubmit(data);
+    onSubmit({
+      ...data,
+      categoriaId: data.overrideManual ? data.categoriaId : undefined,
+    });
   };
 
   return (
@@ -330,6 +416,82 @@ export function MemberForm({
             <p className="text-sm text-destructive">{errors.estado.message}</p>
           )}
         </div>
+
+        {showCategorySelector && (
+          <div className="space-y-4 md:col-span-2 border border-border rounded-lg p-4">
+            <div className="space-y-2">
+              <Label htmlFor="overrideManual" className="font-semibold">
+                Categoría del socio
+              </Label>
+
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="overrideManual"
+                  checked={overrideManualValue}
+                  onCheckedChange={(checked) => handleOverrideChange(Boolean(checked))}
+                  disabled={isSubmitting}
+                />
+
+                <div className="space-y-1">
+                  <Label htmlFor="overrideManual" className="cursor-pointer">
+                    Override manual
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Al activarlo, podés elegir manualmente la categoría y frenar el
+                    recálculo automático.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {overrideManualValue ? (
+              <div className="space-y-2">
+                <Label htmlFor="categoriaId">
+                  Selección manual <span className="text-gray-500">*</span>
+                </Label>
+
+                <Select
+                  value={categoriaIdValue ? categoriaIdValue.toString() : undefined}
+                  onValueChange={(value) =>
+                    setValue("categoriaId", Number(value), {
+                      shouldDirty: true,
+                      shouldValidate: true,
+                    })
+                  }
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger
+                    className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors duration-200
+                    focus:ring-2 focus:ring-primary/60 focus:border-primary
+                    ${errors.categoriaId ? "border-red-500" : "border-gray-300"}
+                    hover:border-gray-400`}
+                  >
+                    <SelectValue placeholder="Seleccioná una categoría" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoriasVisibles.map((categoria) => (
+                      <SelectItem key={categoria.id} value={categoria.id.toString()}>
+                        {categoria.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {errors.categoriaId && (
+                  <p className="text-sm text-destructive">{errors.categoriaId.message}</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="categoriaReadonly">Categoría calculada automáticamente</Label>
+                <Input id="categoriaReadonly" value={nombreCategoriaReadonly} readOnly disabled />
+                <p className="text-xs text-muted-foreground">
+                  Sin override, esta categoría se recalcula automáticamente y no se puede editar.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex gap-3 pt-4">
@@ -352,6 +514,16 @@ export function MemberForm({
           Cancelar
         </Button>
       </div>
+
+      <ConfirmationDialog
+        isOpen={isOverrideConfirmationOpen}
+        onClose={() => setIsOverrideConfirmationOpen(false)}
+        onConfirm={confirmEnableOverride}
+        title="¿Activar override manual?"
+        description="Al confirmar, se desactiva el recálculo automático de categoría y vas a poder elegir cualquier categoría, incluyendo HONORARIO."
+        confirmText="Sí, activar"
+        cancelText="No activar"
+      />
     </form>
   );
 }

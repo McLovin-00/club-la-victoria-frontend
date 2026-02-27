@@ -18,7 +18,7 @@ export interface Socio {
   genero: GENERO;
   overrideManual?: boolean;
   categoriaId?: number;
-  categoria?: CategoriaSocioResumen | null;
+  categoria?: CategoriaSocioResumen | string | null;
   categoriaNombre?: string;
   nombreCategoria?: string;
 }

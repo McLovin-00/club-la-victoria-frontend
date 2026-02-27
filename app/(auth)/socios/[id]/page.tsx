@@ -34,8 +34,9 @@ export default function MemberDetailPage() {
 
   const { data: socio, isLoading } = useSocioById(socioId);
 
+  const categoriaRaw = socio?.categoria;
   const categoriaActual =
-    (typeof socio?.categoria === "string" ? socio.categoria : socio?.categoria?.nombre) ??
+    (typeof categoriaRaw === "string" ? categoriaRaw : categoriaRaw?.nombre) ??
     socio?.categoriaNombre ??
     socio?.nombreCategoria ??
     "Sin categoría asignada";

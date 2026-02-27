@@ -30,8 +30,13 @@ export default function CreateMemberPage() {
 
     // Add all form fields except 'foto'
     Object.entries(formData).forEach(([key, value]) => {
-      if (value !== null && value !== undefined && key !== "foto") {
-        formDataToSend.append(key, value);
+      if (
+        value !== null &&
+        value !== undefined &&
+        key !== "foto" &&
+        typeof value !== "object"
+      ) {
+        formDataToSend.append(key, String(value));
       }
     });
 

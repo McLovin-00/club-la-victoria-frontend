@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { VALIDACION, MENSAJES_ERROR, GENERO, ESTADO_SOCIO } from "@/lib/constants";
 
-export const socioSchema = z.object({
+const socioBaseSchema = z.object({
   // DNI - requerido, exactamente 8 dígitos
   dni: z
     .string()
@@ -129,7 +129,12 @@ export const socioSchema = z.object({
 
   // Foto URL - opcional
   fotoUrl: z.string().optional(),
-}).superRefine((data, ctx) => {
+});
+
+const validarCategoriaOverride = (
+  data: { overrideManual?: boolean; categoriaId?: number },
+  ctx: z.RefinementCtx
+) => {
   if (data.overrideManual && !data.categoriaId) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -137,15 +142,17 @@ export const socioSchema = z.object({
       message: MENSAJES_ERROR.CAMPO_REQUERIDO,
     });
   }
-});
+};
+
+export const socioSchema = socioBaseSchema.superRefine(validarCategoriaOverride);
 // Tipo inferido del schema
 export type SocioFormData = z.infer<typeof socioSchema>;
 
 // Schema para update (todos los campos opcionales excepto los que siempre se necesitan)
-export const socioUpdateSchema = socioSchema.partial({
+export const socioUpdateSchema = socioBaseSchema.partial({
   email: true,
   telefono: true,
   fotoUrl: true,
-});
+}).superRefine(validarCategoriaOverride);
 
 export type SocioUpdateFormData = z.infer<typeof socioUpdateSchema>;

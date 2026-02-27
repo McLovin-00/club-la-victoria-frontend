@@ -207,6 +207,7 @@ export default function EditMemberPage() {
               socio={socio}
               onSubmit={handleUpdateSocio}
               onCancel={() => router.push("/socios")}
+              showCategorySelector
             />
           </CardContent>
         </Card>
