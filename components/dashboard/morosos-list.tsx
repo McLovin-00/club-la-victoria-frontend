@@ -113,9 +113,10 @@ export function MorososList() {
       </CardHeader>
       <CardContent className="p-0">
         {/* Encabezado de la tabla */}
-        <div className="grid grid-cols-[1fr_auto_auto] md:grid-cols-[1fr_120px_120px] gap-4 px-6 py-2 border-b bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        <div className="grid grid-cols-[1fr_auto_auto_auto] md:grid-cols-[1fr_120px_120px_120px] gap-4 px-6 py-2 border-b bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
           <span>Socio</span>
           <span className="text-center">Meses deuda</span>
+          <span className="text-center">Monto deuda</span>
           <span className="text-right">Acción</span>
         </div>
 
@@ -144,7 +145,7 @@ export function MorososList() {
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
-                  className="grid grid-cols-[1fr_auto_auto] md:grid-cols-[1fr_120px_120px] gap-4 items-center px-6 border-b last:border-b-0 hover:bg-muted/50 transition-colors"
+                  className="grid grid-cols-[1fr_auto_auto_auto] md:grid-cols-[1fr_120px_120px_120px] gap-4 items-center px-6 border-b last:border-b-0 hover:bg-muted/50 transition-colors"
                 >
                   {/* Nombre completo del socio */}
                   <div className="truncate">
@@ -158,6 +159,13 @@ export function MorososList() {
                     <Badge variant={getBadgeVariant(moroso.mesesDeuda)}>
                       {moroso.mesesDeuda} {moroso.mesesDeuda === 1 ? "mes" : "meses"}
                     </Badge>
+                  </div>
+
+                  {/* Monto total adeudado */}
+                  <div className="text-center">
+                    <span className="text-sm font-medium text-foreground">
+                      ${moroso.montoTotal.toLocaleString("es-AR")}
+                    </span>
                   </div>
 
                   {/* Botón para ver cuenta corriente */}
