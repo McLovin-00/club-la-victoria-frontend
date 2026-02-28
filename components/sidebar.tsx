@@ -24,6 +24,7 @@ import {
   FilePlus,
   CreditCard,
   FileText,
+  LayoutDashboard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -47,6 +48,7 @@ type NavigationEntry = NavItem | NavGroup;
 
 // Estructura de navegación con grupos colapsables
 const navigation: NavigationEntry[] = [
+  { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Gestión de Socios", href: "/socios", icon: Users },
   {
     id: "pileta",

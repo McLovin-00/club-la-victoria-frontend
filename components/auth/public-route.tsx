@@ -16,7 +16,7 @@ export default function PublicRoute({
 
   useEffect(() => {
     if (authService.isAuthenticated()) {
-      router.push("/socios");
+      router.push("/");
     } else {
       setIsLoading(false);
     }
