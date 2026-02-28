@@ -85,7 +85,15 @@ export function Sidebar({ onClose }: SidebarProps) {
   const pathname = usePathname();
   const [expandedGroups, setExpandedGroups] = useState<string[]>(["pileta", "cuotas"]);
 
-  const toggleGroup = (groupId: string) => {
+  // Verifica si algún hijo del grupo está activo
+  const groupHasActiveChild = (group: NavGroup): boolean => {
+    return group.items.some((item) => pathname === item.href);
+  };
+
+  const toggleGroup = (groupId: string, hasActiveChild: boolean) => {
+    // No permite colapsar un grupo que tiene un hijo activo
+    if (hasActiveChild) return;
+
     setExpandedGroups((prev) =>
       prev.includes(groupId)
         ? prev.filter((id) => id !== groupId)
@@ -129,28 +137,40 @@ export function Sidebar({ onClose }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-1" role="navigation" aria-label="Navegación principal">
         {navigation.map((entry) => {
           if (isNavGroup(entry)) {
-            const isOpen = expandedGroups.includes(entry.id);
+            const hasActiveChild = groupHasActiveChild(entry);
+            // El grupo queda abierto si está expandido manualmente O si tiene un hijo activo
+            const isOpen = expandedGroups.includes(entry.id) || hasActiveChild;
 
             return (
               <Collapsible
                 key={entry.id}
                 open={isOpen}
-                onOpenChange={() => toggleGroup(entry.id)}
+                onOpenChange={() => toggleGroup(entry.id, hasActiveChild)}
               >
-                <CollapsibleTrigger className="flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground">
-                  <entry.icon className="h-4 w-4" />
-                  {entry.label}
+                <CollapsibleTrigger
+                  className={cn(
+                    "flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1",
+                    hasActiveChild
+                      ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
+                    hasActiveChild && "cursor-default"
+                  )}
+                  aria-label={`${entry.label} - ${isOpen ? "expandido" : "colapsado"}`}
+                >
+                  <entry.icon className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{entry.label}</span>
                   <ChevronDown
                     className={cn(
-                      "ml-auto h-4 w-4 transition-transform duration-200",
+                      "ml-auto h-4 w-4 shrink-0 transition-transform duration-200",
                       isOpen && "rotate-180"
                     )}
                   />
                 </CollapsibleTrigger>
-                <CollapsibleContent>
+                <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
                   <div className="mt-1 space-y-1 pl-4">
                     {entry.items.map((item) => {
                       const isActive = pathname === item.href;
@@ -160,14 +180,16 @@ export function Sidebar({ onClose }: SidebarProps) {
                           href={item.href}
                           className={cn(
                             "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1",
                             isActive
                               ? "bg-sidebar-accent text-sidebar-accent-foreground"
                               : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                           )}
                           onClick={onClose}
+                          aria-current={isActive ? "page" : undefined}
                         >
-                          <item.icon className="h-4 w-4" />
-                          {item.name}
+                          <item.icon className="h-4 w-4 shrink-0" />
+                          <span className="truncate">{item.name}</span>
                         </Link>
                       );
                     })}
@@ -185,14 +207,16 @@ export function Sidebar({ onClose }: SidebarProps) {
               href={entry.href}
               className={cn(
                 "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1",
                 isActive
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
               )}
               onClick={onClose}
+              aria-current={isActive ? "page" : undefined}
             >
-              <entry.icon className="h-4 w-4" />
-              {entry.name}
+              <entry.icon className="h-4 w-4 shrink-0" />
+              <span className="truncate">{entry.name}</span>
             </Link>
           );
         })}
