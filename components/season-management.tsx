@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SeasonForm } from "@/components/season-form";
-import { Plus, Edit, Trash2, Calendar } from "lucide-react";
+import { Plus, Edit, Trash2, Calendar, AlertTriangle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -23,12 +23,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
 import { Temporada } from "@/lib/types";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useTemporadas } from "@/hooks/api/temporadas/useTemporadas";
 import { useCreateTemporada } from "@/hooks/api/temporadas/useCreateTemporada";
 import { useUpdateTemporada } from "@/hooks/api/temporadas/useUpdateTemporada";
 import { useDeleteTemporada } from "@/hooks/api/temporadas/useDeleteTemporada";
+import { useTieneRegistrosPileta } from "@/hooks/api/temporadas/useTieneRegistrosPileta";
 import { formatDateLong } from "@/lib/utils/date";
 
 export function SeasonManagement() {
@@ -37,10 +39,20 @@ export function SeasonManagement() {
   const { mutateAsync: updateTemporada } = useUpdateTemporada();
   const { mutateAsync: deleteTemporada, isPending: isPendingDelete } = useDeleteTemporada();
 
-  const [isCreateDialogOpen,  setIsCreateDialogOpen] = useState(false);
-  const [editingTemporada, setEditingTemporada] = useState<Temporada | null>(
-    null
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [editingTemporada, setEditingTemporada] = useState<Temporada | null>(null);
+  
+  // Estado para el diálogo de eliminación con confirmación
+  const [deletingTemporada, setDeletingTemporada] = useState<Temporada | null>(null);
+  const [confirmText, setConfirmText] = useState("");
+  
+  // Hook para verificar si la temporada tiene registros de pileta
+  const { data: registrosPiletaData, isLoading: isLoadingRegistros } = useTieneRegistrosPileta(
+    deletingTemporada?.id ? Number.parseInt(deletingTemporada.id, 10) : null
   );
+
+  const tieneRegistrosPileta = registrosPiletaData?.tieneRegistros ?? false;
+  const cantidadRegistros = registrosPiletaData?.cantidad ?? 0;
 
   const handleCrearTemporada = async (formData: Omit<Temporada, "id">) => {
     
@@ -80,10 +92,24 @@ export function SeasonManagement() {
   const handleEliminarTemporada = async (idTemporada: string) => {
     try {
       await deleteTemporada({ id: parseInt(idTemporada) });
+      setDeletingTemporada(null);
+      setConfirmText("");
     } catch {
       // El error ya fue mostrado en el hook de API
     }
   };
+
+  const handleOpenDeleteDialog = (temporada: Temporada) => {
+    setDeletingTemporada(temporada);
+    setConfirmText("");
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setDeletingTemporada(null);
+    setConfirmText("");
+  };
+
+  const canConfirmDelete = !tieneRegistrosPileta || confirmText.toLowerCase() === "borrar";
 
   return (
     <div className="space-y-6">
@@ -186,11 +212,17 @@ export function SeasonManagement() {
                       </DialogContent>
                     </Dialog>
 
-                    <AlertDialog>
+                    <AlertDialog 
+                      open={deletingTemporada?.id === temporada.id}
+                      onOpenChange={(open) => {
+                        if (!open) handleCloseDeleteDialog();
+                      }}
+                    >
                       <AlertDialogTrigger asChild>
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => handleOpenDeleteDialog(temporada)}
                           className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -198,12 +230,41 @@ export function SeasonManagement() {
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>
+                          <AlertDialogTitle className="flex items-center gap-2">
+                            {tieneRegistrosPileta && (
+                              <AlertTriangle className="h-5 w-5 text-destructive" />
+                            )}
                             ¿Eliminar temporada?
                           </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Esta acción no se puede deshacer. Se eliminará
-                            permanentemente la temporada "{temporada.nombre}".
+                          <AlertDialogDescription asChild>
+                            <div className="space-y-3">
+                              <p>
+                                Esta acción no se puede deshacer. Se eliminará
+                                permanentemente la temporada &quot;{temporada.nombre}&quot;.
+                              </p>
+                              
+                              {isLoadingRegistros ? (
+                                <p className="text-sm text-muted-foreground">
+                                  Verificando registros de pileta...
+                                </p>
+                              ) : tieneRegistrosPileta ? (
+                                <div className="space-y-3 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                                  <p className="text-sm font-medium text-destructive">
+                                    ⚠️ Esta temporada tiene {cantidadRegistros} registro{cantidadRegistros !== 1 ? 's' : ''} de ingreso a pileta asociado{cantidadRegistros !== 1 ? 's' : ''}.
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    Para confirmar la eliminación, escribe <strong className="text-foreground">&quot;borrar&quot;</strong> en el campo de abajo:
+                                  </p>
+                                  <Input
+                                    value={confirmText}
+                                    onChange={(e) => setConfirmText(e.target.value)}
+                                    placeholder='Escribe "borrar" para confirmar'
+                                    className="mt-2"
+                                    disabled={isPendingDelete}
+                                  />
+                                </div>
+                              ) : null}
+                            </div>
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -215,9 +276,16 @@ export function SeasonManagement() {
                               }
                             }}
                             className="bg-destructive hover:bg-destructive/85"
-                            disabled={isPendingDelete}
+                            disabled={isPendingDelete || !canConfirmDelete}
                           >
-                            Eliminar
+                            {isPendingDelete ? (
+                              <span className="flex items-center gap-2">
+                                <LoadingSpinner size="sm" />
+                                Eliminando...
+                              </span>
+                            ) : (
+                              "Eliminar"
+                            )}
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>

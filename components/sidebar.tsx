@@ -25,6 +25,7 @@ import {
   CreditCard,
   FileText,
   LayoutDashboard,
+  AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
@@ -65,11 +66,12 @@ const navigation: NavigationEntry[] = [
     label: "Cuotas",
     icon: DollarSign,
     items: [
-      { name: "Categorías", href: "/cobros/categorias", icon: Tags },
+      { name: "Categorias", href: "/cobros/categorias", icon: Tags },
       { name: "Generar cuotas", href: "/cobros/generar", icon: FilePlus },
       { name: "Registrar pagos", href: "/cobros/pagos", icon: CreditCard },
       { name: "Estado de pagos", href: "/cobros/estado-pagos", icon: CalendarCheck },
       { name: "Reportes", href: "/cobros/reportes", icon: FileText },
+      { name: "Morosos", href: "/cobros/morosos", icon: AlertTriangle },
     ],
   },
 ];
@@ -120,7 +122,7 @@ export function Sidebar({ onClose }: SidebarProps) {
             height={32}
           />
           <div>
-            <h2 className="font-semibold text-sidebar-foreground">
+            <h2 className="font-semibold tracking-tight text-sidebar-foreground">
               Club La Victoria
             </h2>
             <p className="text-xs text-muted-foreground">Panel de Control</p>
@@ -229,7 +231,7 @@ export function Sidebar({ onClose }: SidebarProps) {
         <Button
           variant="ghost"
           onClick={handleLogout}
-          className="w-full grid grid-cols-3 text-white text-center bg-sidebar-primary hover:bg-sidebar-primary/85 hover:scale-105 hover:text-sidebar-primary-foreground"
+          className="w-full bg-sidebar-primary text-center text-sidebar-primary-foreground transition-colors hover:bg-sidebar-primary/85 hover:text-sidebar-primary-foreground"
         >
           <LogOut className="h-4 w-4 mr-3" />
           <span>Cerrar Sesión</span>

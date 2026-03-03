@@ -104,9 +104,19 @@ export default function MemberDetailPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge
                       variant={socio.estado === ESTADO_SOCIO.ACTIVO ? "default" : "secondary"}
-                      className={socio.estado === ESTADO_SOCIO.ACTIVO ? "bg-primary text-primary-foreground" : ""}
+                      className={
+                        socio.estado === ESTADO_SOCIO.ACTIVO 
+                          ? "bg-primary text-primary-foreground" 
+                          : socio.estado === ESTADO_SOCIO.MOROSO 
+                            ? "bg-orange-500 text-white" 
+                            : ""
+                      }
                     >
-                      {socio.estado === ESTADO_SOCIO.ACTIVO ? "Activo" : "Inactivo"}
+                      {socio.estado === ESTADO_SOCIO.ACTIVO 
+                        ? "Activo" 
+                        : socio.estado === ESTADO_SOCIO.MOROSO 
+                          ? "Moroso" 
+                          : "Inactivo"}
                     </Badge>
                     <Badge variant="outline">DNI: {socio.dni}</Badge>
                   </div>

@@ -6,12 +6,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Edit,
+  FileText,
   Loader2,
   Plus,
   Search,
   Trash2,
   User,
+  Users,
 } from "lucide-react";
+
 
 import { useDeleteSocio } from "@/hooks/api/socios/useDeleteSocio";
 import { useSocios } from "@/hooks/api/socios/useSocios";
@@ -113,14 +116,36 @@ export function MemberManagement() {
   const startIndex = (currentPage - 1) * sociosPorPagina;
 
   const renderEstadoBadge = (estado: ESTADO_SOCIO) => {
+    const getBadgeStyles = () => {
+      switch (estado) {
+        case ESTADO_SOCIO.ACTIVO:
+          return "bg-primary text-primary-foreground";
+        case ESTADO_SOCIO.MOROSO:
+          return "bg-orange-500 text-white";
+        case ESTADO_SOCIO.INACTIVO:
+        default:
+          return "bg-secondary text-secondary-foreground";
+      }
+    };
+
+    const getEstadoLabel = () => {
+      switch (estado) {
+        case ESTADO_SOCIO.ACTIVO:
+          return "Activo";
+        case ESTADO_SOCIO.MOROSO:
+          return "Moroso";
+        case ESTADO_SOCIO.INACTIVO:
+        default:
+          return "Inactivo";
+      }
+    };
+
     return (
       <Badge
         variant={estado === ESTADO_SOCIO.ACTIVO ? "default" : "secondary"}
-        className={`${
-          estado === ESTADO_SOCIO.ACTIVO ? "bg-primary text-primary-foreground" : ""
-        } flex-shrink-0`}
+        className={`${getBadgeStyles()} flex-shrink-0`}
       >
-        {estado === ESTADO_SOCIO.ACTIVO ? "Activo" : "Inactivo"}
+        {getEstadoLabel()}
       </Badge>
     );
   };
@@ -149,6 +174,17 @@ export function MemberManagement() {
           >
             <Edit className="h-4 w-4" />
             <span className="sr-only">Editar</span>
+          </Button>
+        </Link>
+
+        <Link href={`/socios/${socio.id}/cuenta-corriente`}>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white bg-transparent"
+          >
+            <FileText className="h-4 w-4" />
+            <span className="sr-only">Cuenta corriente</span>
           </Button>
         </Link>
 
@@ -220,6 +256,12 @@ export function MemberManagement() {
               <Button className="bg-primary text-primary-foreground rounded-lg whitespace-nowrap hover:bg-primary/85">
                 <Plus className="mr-2 h-4 w-4" />
                 Crear Socio
+              </Button>
+            </Link>
+            <Link href="/socios/grupos-familiares">
+              <Button variant="outline" className="rounded-lg whitespace-nowrap">
+                <Users className="mr-2 h-4 w-4" />
+                Grupos Familiares
               </Button>
             </Link>
           </div>

@@ -96,8 +96,8 @@ const socioBaseSchema = z.object({
     errorMap: () => ({ message: MENSAJES_ERROR.CAMPO_REQUERIDO }),
   }),
 
-  // Estado - requerido, debe ser ACTIVO o INACTIVO
-  estado: z.enum([ESTADO_SOCIO.ACTIVO, ESTADO_SOCIO.INACTIVO], {
+  // Estado - requerido, debe ser ACTIVO, INACTIVO o MOROSO
+  estado: z.enum([ESTADO_SOCIO.ACTIVO, ESTADO_SOCIO.INACTIVO, ESTADO_SOCIO.MOROSO], {
     errorMap: () => ({ message: MENSAJES_ERROR.CAMPO_REQUERIDO }),
   }),
 
@@ -129,6 +129,12 @@ const socioBaseSchema = z.object({
 
   // Foto URL - opcional
   fotoUrl: z.string().optional(),
+
+  // Tarjeta del centro - opcional
+  tarjetaCentro: z.boolean().optional(),
+
+  // Número de tarjeta del centro - opcional, requerido si tarjetaCentro es true
+  numeroTarjetaCentro: z.string().optional(),
 });
 
 const validarCategoriaOverride = (
@@ -144,7 +150,22 @@ const validarCategoriaOverride = (
   }
 };
 
-export const socioSchema = socioBaseSchema.superRefine(validarCategoriaOverride);
+const validarTarjetaCentro = (
+  data: { tarjetaCentro?: boolean; numeroTarjetaCentro?: string },
+  ctx: z.RefinementCtx
+) => {
+  if (data.tarjetaCentro && !data.numeroTarjetaCentro?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["numeroTarjetaCentro"],
+      message: MENSAJES_ERROR.CAMPO_REQUERIDO,
+    });
+  }
+};
+
+export const socioSchema = socioBaseSchema
+  .superRefine(validarCategoriaOverride)
+  .superRefine(validarTarjetaCentro);
 // Tipo inferido del schema
 export type SocioFormData = z.infer<typeof socioSchema>;
 
@@ -153,6 +174,7 @@ export const socioUpdateSchema = socioBaseSchema.partial({
   email: true,
   telefono: true,
   fotoUrl: true,
-}).superRefine(validarCategoriaOverride);
+  numeroTarjetaCentro: true,
+}).superRefine(validarCategoriaOverride).superRefine(validarTarjetaCentro);
 
 export type SocioUpdateFormData = z.infer<typeof socioUpdateSchema>;

@@ -42,10 +42,10 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="shadow-lg border-border">
+    <Card className="border-border/80 shadow-[var(--shadow-soft)]">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center text-foreground">
-          Iniciar Sesión
+        <CardTitle className="text-center text-2xl font-semibold tracking-tight text-foreground">
+          Iniciar sesion
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -62,6 +62,8 @@ export function LoginForm() {
                       type="text"
                       placeholder="Ingrese su nombre de usuario."
                       disabled={isPending}
+                      autoComplete="username"
+                      aria-invalid={!!form.formState.errors.usuario}
                       className="rounded-lg border-border focus:ring-primary focus:border-primary"
                       {...field}
                     />
@@ -83,6 +85,8 @@ export function LoginForm() {
                         type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         disabled={isPending}
+                        autoComplete="current-password"
+                        aria-invalid={!!form.formState.errors.password}
                         className="rounded-lg border-border focus:ring-primary focus:border-primary pr-10"
                         {...field}
                       />
@@ -92,6 +96,7 @@ export function LoginForm() {
                         size="sm"
                         className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                         onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
                       >
                         {showPassword ? (
                           <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -114,12 +119,12 @@ export function LoginForm() {
               {isPending ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-                  Iniciando sesión...
+                  Iniciando sesion...
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <LogIn className="w-4 h-4" />
-                  Iniciar Sesión
+                  Iniciar sesion
                 </div>
               )}
             </Button>

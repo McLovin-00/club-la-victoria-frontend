@@ -9,7 +9,8 @@ export enum GENERO {
 // Estados de socios
 export enum ESTADO_SOCIO {
   ACTIVO = 'ACTIVO',
-  INACTIVO = 'INACTIVO'
+  INACTIVO = 'INACTIVO',
+  MOROSO = 'MOROSO'
 }
 
 //Stale time para React Query

@@ -92,7 +92,7 @@ export function MemberForm({
 }: MemberFormProps) {
   const [isOverrideConfirmationOpen, setIsOverrideConfirmationOpen] =
     useState(false);
-  const { data: categorias = [] } = useCategorias(true);
+  const { data: categorias = [] } = useCategorias();
   const categoriaIdInicial = resolveSocioCategoryId(socio);
 
   const {
@@ -117,6 +117,8 @@ export function MemberForm({
       overrideManual: socio?.overrideManual ?? false,
       categoriaId: categoriaIdInicial,
       fotoUrl: (socio as SocioWithFoto)?.fotoUrl || undefined,
+      tarjetaCentro: socio?.tarjetaCentro ?? false,
+      numeroTarjetaCentro: socio?.numeroTarjetaCentro || undefined,
     },
   });
 
@@ -136,6 +138,25 @@ export function MemberForm({
         overrideManual: socio.overrideManual ?? false,
         categoriaId: resolveSocioCategoryId(socio),
         fotoUrl: (socio as SocioWithFoto)?.fotoUrl || undefined,
+        tarjetaCentro: socio.tarjetaCentro ?? false,
+        numeroTarjetaCentro: socio.numeroTarjetaCentro || undefined,
+      });
+    } else {
+      // Resetear a valores por defecto cuando no hay socio (creación de nuevo socio)
+      reset({
+        dni: "",
+        nombre: "",
+        apellido: "",
+        direccion: "",
+        email: undefined,
+        telefono: undefined,
+        fechaNacimiento: "",
+        genero: GENERO.MASCULINO,
+        estado: ESTADO_SOCIO.ACTIVO,
+        overrideManual: false,
+        categoriaId: undefined,
+        fotoUrl: undefined,
+        tarjetaCentro: false,
       });
     }
   }, [socio, reset]);
@@ -144,6 +165,7 @@ export function MemberForm({
   const estadoValue = watch("estado");
   const overrideManualValue = watch("overrideManual") ?? false;
   const categoriaIdValue = watch("categoriaId");
+  const tarjetaCentroValue = watch("tarjetaCentro") ?? false;
 
   const categoriasVisibles = overrideManualValue
     ? categorias
@@ -180,11 +202,26 @@ export function MemberForm({
     }
   };
 
+  const handleTarjetaCentroChange = (checked: boolean) => {
+    setValue("tarjetaCentro", checked, { shouldDirty: true, shouldValidate: true });
+    if (!checked) {
+      setValue("numeroTarjetaCentro", undefined, { shouldDirty: true, shouldValidate: true });
+    }
+  };
+
   const handleFormSubmit = (data: SocioFormData) => {
-    onSubmit({
+    // Asegurar que overrideManual se incluya explícitamente
+    // ya que no está registrado con register() sino con watch/setValue
+    const overrideManual = watch('overrideManual') ?? false;
+    console.log('[DEBUG handleFormSubmit] data.overrideManual:', data.overrideManual, 'tipo:', typeof data.overrideManual);
+    console.log('[DEBUG handleFormSubmit] watch overrideManual:', overrideManual, 'tipo:', typeof overrideManual);
+    const finalData = {
       ...data,
-      categoriaId: data.overrideManual ? data.categoriaId : undefined,
-    });
+      overrideManual,
+      categoriaId: overrideManual ? data.categoriaId : undefined,
+    };
+    console.log('[DEBUG handleFormSubmit] finalData.overrideManual:', finalData.overrideManual);
+    onSubmit(finalData);
   };
 
   return (
@@ -410,10 +447,55 @@ export function MemberForm({
             <SelectContent>
               <SelectItem value="ACTIVO">Activo</SelectItem>
               <SelectItem value="INACTIVO">Inactivo</SelectItem>
+              <SelectItem value="MOROSO">Moroso</SelectItem>
             </SelectContent>
           </Select>
-          {errors.estado && (
-            <p className="text-sm text-destructive">{errors.estado.message}</p>
+        </div>
+
+        {/* Tarjeta del Centro */}
+        <div className="space-y-4 md:col-span-2 border border-border rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="tarjetaCentro"
+              checked={tarjetaCentroValue}
+              onCheckedChange={(checked) => handleTarjetaCentroChange(Boolean(checked))}
+              disabled={isSubmitting}
+            />
+
+            <div className="space-y-1">
+              <Label htmlFor="tarjetaCentro" className="cursor-pointer">
+                Tiene tarjeta del centro
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Marcá esta opción si el socio tiene tarjeta del centro.
+              </p>
+            </div>
+          </div>
+
+          {tarjetaCentroValue && (
+            <div className="space-y-2">
+              <Label htmlFor="numeroTarjetaCentro">
+                Número de tarjeta del centro{" "}
+                <span className={errors.numeroTarjetaCentro ? "text-red-500" : "text-gray-500"}>
+                  *
+                </span>
+              </Label>
+              <Input
+                id="numeroTarjetaCentro"
+                {...register("numeroTarjetaCentro")}
+                placeholder="TC-12345"
+                className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors duration-200
+                  focus:ring-2 focus:ring-primary/60 focus:border-primary
+                  ${errors.numeroTarjetaCentro ? "border-red-500" : "border-gray-300"}
+                  hover:border-gray-400`}
+                disabled={isSubmitting}
+              />
+              {errors.numeroTarjetaCentro && (
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.numeroTarjetaCentro.message}
+                </p>
+              )}
+            </div>
           )}
         </div>
 

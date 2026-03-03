@@ -20,12 +20,11 @@ const UMBRAL_MESES_MOROSO = 3
 
 /**
  * Determina cuántos meses tiene un socio sin pagar según su registro de pagos anual.
- * Los meses con valor null o distinto de un estado pagado se consideran pendientes.
+ * Solo los meses con cuota explícitamente PENDIENTE se consideran deuda.
+ * Los meses en null representan ausencia de cuota y no deben contar como deuda.
  */
 function calcularMesesPendientes(meses: Record<string, string | null>): number {
-  return Object.values(meses).filter(
-    (estado) => estado === null || estado === "PENDIENTE"
-  ).length
+  return Object.values(meses).filter((estado) => estado === "PENDIENTE").length
 }
 
 /**

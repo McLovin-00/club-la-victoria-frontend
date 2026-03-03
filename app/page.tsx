@@ -14,12 +14,11 @@ export default function HomePage() {
     <ProtectedRoute>
       <DashboardLayout>
         <div className="space-y-8">
-          {/* Título del dashboard */}
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Panel de Administración
+          <div className="page-header">
+            <h1 className="page-title">
+              Panel de administracion
             </h1>
-            <p className="text-muted-foreground">
+            <p className="page-description">
               Resumen general del estado del club
             </p>
           </div>
@@ -32,7 +31,7 @@ export default function HomePage() {
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
               <h2 className="text-xl font-semibold text-foreground">
-                Socios en Morosidad
+                Socios en morosidad
               </h2>
             </div>
             <MorososList />

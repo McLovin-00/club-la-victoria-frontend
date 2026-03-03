@@ -19,9 +19,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
+      <body
+        suppressHydrationWarning
+        className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}
+      >
         <TanstackProvider>
-          {children}
+          <a href="#main-content" className="skip-link">
+            Saltar al contenido principal
+          </a>
+          <div id="main-content">{children}</div>
           <Toaster
             position="top-center"
             duration={3000}

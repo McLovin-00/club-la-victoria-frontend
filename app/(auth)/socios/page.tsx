@@ -5,9 +5,9 @@ export default function MembersPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Gestión de Socios</h1>
-          <p className="text-muted-foreground mt-2">
+        <div className="page-header">
+          <h1 className="page-title">Gestion de socios</h1>
+          <p className="page-description">
             Administra los socios del club, crea nuevos registros y actualiza información
           </p>
         </div>

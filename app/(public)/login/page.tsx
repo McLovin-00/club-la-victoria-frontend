@@ -5,29 +5,27 @@ import Image from "next/image";
 export default function LoginPage() {
   return (
     <PublicRoute>
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-[95%] md:w-full max-w-md">
-          {/* Club Logo */}
-          <div className="text-center mb-8 flex flex-col items-center">
-            <Image
-              alt="Logo"
-              src="https://www.clublavictoria.com.ar/assets/logo-DGcyiAEh.webp"
-              width={72}
-              height={48}
-              className="mb-4"
-            />
-            <h1 className="text-2xl font-bold text-foreground">
-              Panel de Administración
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Gestión de Socios y temporadas de piletas del Club
-            </p>
-          </div>
+      <main className="min-h-screen bg-background">
+        <section className="mx-auto flex min-h-screen w-[95%] max-w-md items-center justify-center md:w-full">
+          <div className="w-full">
+            <div className="mb-8 flex flex-col items-center text-center">
+              <Image
+                alt="Logo"
+                src="https://www.clublavictoria.com.ar/assets/logo-DGcyiAEh.webp"
+                width={72}
+                height={48}
+                className="mb-4"
+              />
+              <h1 className="page-title text-balance">Panel de Administracion</h1>
+              <p className="page-description mt-2 text-balance">
+                Gestion de socios y temporadas de pileta del club
+              </p>
+            </div>
 
-          {/* Login Form */}
-          <LoginForm />
-        </div>
-      </div>
+            <LoginForm />
+          </div>
+        </section>
+      </main>
     </PublicRoute>
   );
 }

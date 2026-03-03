@@ -21,6 +21,8 @@ export interface Socio {
   categoria?: CategoriaSocioResumen | string | null;
   categoriaNombre?: string;
   nombreCategoria?: string;
+  tarjetaCentro?: boolean;
+  numeroTarjetaCentro?: string;
 }
 
 export interface CategoriaSocioResumen {

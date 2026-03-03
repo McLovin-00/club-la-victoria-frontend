@@ -4,7 +4,7 @@
 // Obtiene datos de la API mediante hooks de TanStack Query
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { AlertTriangle, DollarSign, Users, FileWarning, Loader2 } from "lucide-react"
+import { AlertTriangle, DollarSign, Users, FileWarning } from "lucide-react"
 import { useReporteCobranza } from "@/hooks/api/cobros/useReporteCobranza"
 import { useSocios } from "@/hooks/api/socios/useSocios"
 
@@ -87,7 +87,7 @@ export function DashboardStats() {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {Array.from({ length: 4 }).map((_, index) => (
-          <Card key={index} className="shadow-sm border-border animate-pulse">
+          <Card key={index} className="animate-pulse border-border/80 shadow-[var(--shadow-soft)]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="h-4 w-24 bg-muted rounded" />
               <div className="h-4 w-4 bg-muted rounded" />
@@ -106,7 +106,7 @@ export function DashboardStats() {
   if (isError) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="shadow-sm border-destructive col-span-full">
+        <Card className="col-span-full border-destructive/50 shadow-[var(--shadow-soft)]">
           <CardContent className="flex items-center gap-3 pt-6">
             <AlertTriangle className="h-5 w-5 text-destructive" />
             <p className="text-sm text-destructive">
@@ -125,8 +125,8 @@ export function DashboardStats() {
           key={stat.title}
           className={`shadow-sm transition-colors ${
             stat.highlight
-              ? "border-destructive/50 bg-destructive/5"
-              : "border-border"
+              ? "border-destructive/50 bg-destructive/5 shadow-[var(--shadow-soft)]"
+              : "border-border/80 shadow-[var(--shadow-soft)]"
           }`}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
