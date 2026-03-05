@@ -47,6 +47,7 @@ import {
   Search,
   Eye,
   UserMinus,
+  Wallet,
 } from "lucide-react";
 import {
   useGruposFamiliares,
@@ -61,6 +62,7 @@ import {
   type SocioSinGrupo,
   type SocioEnGrupo,
 } from "@/hooks/api/cobros/useGruposFamiliares";
+import { CuentasGrupoDialog } from "@/components/grupos-familiares/CuentasGrupoDialog";
 import { toast } from "sonner";
 
 export default function GruposFamiliaresPage() {
@@ -70,6 +72,8 @@ export default function GruposFamiliaresPage() {
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [isViewSociosOpen, setIsViewSociosOpen] = useState(false);
   const [selectedGrupo, setSelectedGrupo] = useState<GrupoFamiliarConCantidad | null>(null);
+  const [isCuentasOpen, setIsCuentasOpen] = useState(false);
+  const [selectedGrupoForCuentas, setSelectedGrupoForCuentas] = useState<GrupoFamiliarConCantidad | null>(null);
   
   // Form state
   const [nombre, setNombre] = useState("");
@@ -217,6 +221,12 @@ export default function GruposFamiliaresPage() {
     setIsViewSociosOpen(true);
   };
 
+  const openCuentasDialog = (grupo: GrupoFamiliarConCantidad) => {
+    setSelectedGrupoForCuentas(grupo);
+    setIsCuentasOpen(true);
+  };
+
+
   const resetForm = () => {
     setNombre("");
     setDescripcion("");
@@ -324,6 +334,14 @@ export default function GruposFamiliaresPage() {
                             title="Ver socios"
                           >
                             <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openCuentasDialog(grupo)}
+                            title="Ver resumen de cuentas"
+                          >
+                            <Wallet className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -712,6 +730,14 @@ export default function GruposFamiliaresPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cuentas Grupo Dialog */}
+      <CuentasGrupoDialog
+        open={isCuentasOpen}
+        onOpenChange={setIsCuentasOpen}
+        grupoId={selectedGrupoForCuentas?.id ?? null}
+        grupoNombre={selectedGrupoForCuentas?.nombre ?? ""}
+      />
     </DashboardLayout>
   );
 }
