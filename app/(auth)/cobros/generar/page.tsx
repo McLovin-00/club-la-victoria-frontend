@@ -131,6 +131,11 @@ export default function GenerarCuotasPage() {
     [sociosConCuota]
   );
 
+  const sociosConCuotaSinTarjeta = useMemo(
+    () => sociosConCuota.filter((socio) => !socio.tarjetaCentro),
+    [sociosConCuota]
+  );
+
   // Extraer categorías únicas
   const categoriasUnicas = useMemo(() => {
     const cats = new Set(socios.map((s) => s.categoriaNombre));
@@ -428,58 +433,75 @@ export default function GenerarCuotasPage() {
           </div>
         )}
 
-        {/* Botón Descargar Talonario - Solo si hay cuotas generadas */}
-        {periodo && sociosConCuota.length > 0 && (
-          <div className="flex flex-col sm:flex-row gap-3 p-4 rounded-xl bg-gradient-to-r from-emerald-500/5 via-emerald-500/10 to-emerald-500/5 border border-emerald-500/20">
-            <div className="flex-1 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10">
-                <FileDown className="h-5 w-5 text-emerald-600" />
+        {periodo && (sociosConCuotaSinTarjeta.length > 0 || sociosConCuotaTarjetaCentro.length > 0) && (
+          <div className="space-y-3">
+            {sociosConCuotaSinTarjeta.length > 0 && (
+              <div className="flex flex-col sm:flex-row gap-3 p-4 rounded-xl bg-gradient-to-r from-emerald-500/5 via-emerald-500/10 to-emerald-500/5 border border-emerald-500/20">
+                <div className="flex-1 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10">
+                    <FileDown className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Talonario disponible</p>
+                    <p className="text-sm text-muted-foreground">
+                      {sociosConCuotaSinTarjeta.length} cuotas generadas para socios sin tarjeta en {getNombrePeriodo(mes, anio)}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => abrirTalonarioHtml(periodo)}
+                  disabled={isLoadingTalonario}
+                  size="lg"
+                  variant="outline"
+                  className="border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 transition-all duration-300"
+                >
+                  {isLoadingTalonario ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Cargando...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="mr-2 h-5 w-5" />
+                      Descargar Talonario
+                    </>
+                  )}
+                </Button>
               </div>
-              <div>
-                <p className="font-medium">Talonario disponible</p>
-                <p className="text-sm text-muted-foreground">
-                  {sociosConCuota.length} cuotas generadas para {getNombrePeriodo(mes, anio)}
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={() => abrirTalonarioHtml(periodo)}
-              disabled={isLoadingTalonario}
-              size="lg"
-              variant="outline"
-              className="border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 transition-all duration-300"
-            >
-              {isLoadingTalonario ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Cargando...
-                </>
-              ) : (
-                <>
-                  <Download className="mr-2 h-5 w-5" />
-                  Descargar Talonario
-                </>
-              )}
-            </Button>
+            )}
+
             {sociosConCuotaTarjetaCentro.length > 0 && (
-              <Button
-                onClick={handleDescargarTarjetaCentro23f}
-                disabled={descargandoTarjetaCentro}
-                size="lg"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white transition-all duration-300"
-              >
-                {descargandoTarjetaCentro ? (
-                  <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Generando .23f...
-                  </>
-                ) : (
-                  <>
-                    <FileDown className="mr-2 h-5 w-5" />
-                    Descargar Tarjeta Centro (.23f)
-                  </>
-                )}
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3 p-4 rounded-xl bg-gradient-to-r from-sky-500/5 via-sky-500/10 to-sky-500/5 border border-sky-500/20">
+                <div className="flex-1 flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500/10">
+                    <FileDown className="h-5 w-5 text-sky-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium">Archivo Tarjeta del Centro disponible</p>
+                    <p className="text-sm text-muted-foreground">
+                      {sociosConCuotaTarjetaCentro.length} cuotas generadas para socios con tarjeta en {getNombrePeriodo(mes, anio)}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleDescargarTarjetaCentro23f}
+                  disabled={descargandoTarjetaCentro}
+                  size="lg"
+                  className="bg-sky-600 hover:bg-sky-700 text-white transition-all duration-300"
+                >
+                  {descargandoTarjetaCentro ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Generando .23f...
+                    </>
+                  ) : (
+                    <>
+                      <FileDown className="mr-2 h-5 w-5" />
+                      Descargar Tarjeta Centro (.23f)
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
           </div>
         )}

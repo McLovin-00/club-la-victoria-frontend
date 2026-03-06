@@ -10,7 +10,6 @@ export interface CuentaCorriente {
   socioApellido: string;
   cuotas: {
     id: number;
-    barcode?: string;
     periodo: string;
     monto: number;
     estado: EstadoCuota;
@@ -21,12 +20,15 @@ export interface CuentaCorriente {
   mesesAdeudados: number;
 }
 
-export const useCuentaCorriente = (socioId: number) => {
+export const useCuentaCorriente = (socioId: number, anio?: number) => {
   return useQuery<CuentaCorriente>({
-    queryKey: ["cuenta-corriente", socioId],
+    queryKey: ["cuenta-corriente", socioId, anio ?? "all"],
     queryFn: async () => {
       const { data } = await apiClient.get<CuentaCorriente>(
-        `/cobros/cuenta-corriente/${socioId}`
+        `/cobros/cuenta-corriente/${socioId}`,
+        {
+          params: anio ? { anio } : undefined,
+        }
       );
       return data;
     },

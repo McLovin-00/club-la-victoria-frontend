@@ -12,6 +12,7 @@ export interface MiembroConCuenta {
     id: number;
     nombre: string;
     apellido: string;
+    estado?: string;
     dni?: string;
     telefono?: string;
   };
@@ -33,17 +34,20 @@ export interface MemberError {
 
 // ==================== HOOK ====================
 
-export const useCuentasGrupoFamiliar = (grupoId: number | null) => {
+export const useCuentasGrupoFamiliar = (grupoId: number | null, anio: number) => {
   // Get the list of members in the group
   const { data: socios, isLoading: isLoadingSocios, error: sociosError } =
     useSociosEnGrupo(grupoId);
 
   // Create queries array (empty if no socios) - MUST happen before useQueries
   const queries = (socios ?? []).map((socio) => ({
-    queryKey: ["cuenta-corriente", socio.id],
+    queryKey: ["cuenta-corriente", socio.id, anio],
     queryFn: async () => {
       const { data } = await apiClient.get<CuentaCorriente>(
-        `/cobros/cuenta-corriente/${socio.id}`
+        `/cobros/cuenta-corriente/${socio.id}`,
+        {
+          params: { anio },
+        }
       );
       return data;
     },

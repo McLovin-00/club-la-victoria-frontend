@@ -8,6 +8,7 @@ export interface SocioEnGrupo {
   id: number;
   nombre: string;
   apellido: string;
+  estado?: string;
   dni?: string;
   telefono?: string;
 }

@@ -72,6 +72,7 @@ const navigation: NavigationEntry[] = [
       { name: "Estado de pagos", href: "/cobros/estado-pagos", icon: CalendarCheck },
       { name: "Reportes", href: "/cobros/reportes", icon: FileText },
       { name: "Morosos", href: "/cobros/morosos", icon: AlertTriangle },
+      { name: "Cobradores", href: "/cobradores", icon: Users },
     ],
   },
 ];

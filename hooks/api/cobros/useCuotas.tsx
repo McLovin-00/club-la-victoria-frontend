@@ -14,7 +14,6 @@ export interface Cuota {
   periodo: string;
   monto: number;
   estado: EstadoCuota;
-  barcode?: string;
   createdAt: string;
   fechaPago?: string;
   socio?: {
@@ -38,6 +37,7 @@ interface UseCuotasFilters {
   periodo?: string;
   estado?: EstadoCuota;
   socioId?: number;
+  tarjetaCentro?: boolean;
   busqueda?: string;
   page?: number;
   limit?: number;

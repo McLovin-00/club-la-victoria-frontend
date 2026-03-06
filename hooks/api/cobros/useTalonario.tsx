@@ -59,6 +59,37 @@ export const abrirReciboHtml = async (periodo: string, socioId: number) => {
   }
 };
 
+export const abrirReciboMultipleHtml = async (
+  socioId: number,
+  cuotaIds: number[],
+) => {
+  if (cuotaIds.length === 0) {
+    throw new Error("Debe seleccionar al menos una cuota para imprimir el recibo");
+  }
+
+  const token = getToken();
+  const url = `${apiClient.defaults.baseURL}/cobros/recibo/multiple/html`;
+
+  const newWindow = window.open("", "_blank");
+  if (newWindow) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        socioId,
+        cuotaIds,
+      }),
+    });
+
+    const html = await response.text();
+    newWindow.document.write(html);
+    newWindow.document.close();
+  }
+};
+
 const extraerNombreArchivo = (contentDisposition: string | null): string => {
   if (!contentDisposition) {
     return 'tarjeta-centro.23f';

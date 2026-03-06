@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Search, Mail, Phone, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { PAGINACION } from "@/lib/constants";
 import { SocioTemporada } from "@/hooks/api/socios/useSociosTemporada";
@@ -153,16 +154,22 @@ export function SeasonMemberList({
               {canManageMembers && (
                 <div className="flex-shrink-0">
                   <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={isRemoving}
-                        className="text-destructive hover:text-white hover:bg-destructive/85 duration-300"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </AlertDialogTrigger>
+                    <Tooltip>
+                      <AlertDialogTrigger asChild>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isRemoving}
+                            aria-label="Eliminar socio de la temporada"
+                            className="text-destructive hover:text-white hover:bg-destructive/85 duration-300"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                      </AlertDialogTrigger>
+                      <TooltipContent sideOffset={8}>Quitar de temporada</TooltipContent>
+                    </Tooltip>
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>¿Eliminar socio de la temporada?</AlertDialogTitle>

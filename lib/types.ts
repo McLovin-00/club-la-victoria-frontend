@@ -105,10 +105,7 @@ export enum TipoIngreso {
   NO_SOCIO = "NO_SOCIO",
 }
 
-export enum MetodoPago {
-  EFECTIVO = "EFECTIVO",
-  TRANSFERENCIA = "TRANSFERENCIA",
-}
+
 
 // Interfaz para socio en registros de ingreso (versión simplificada)
 export interface SocioRegistro {
@@ -127,7 +124,7 @@ export interface RegistroIngreso {
   apellidoNoSocio?: string;
   tipoIngreso: TipoIngreso;
   habilitaPileta: boolean;
-  metodoPago?: MetodoPago;
+  metodoPago?: string;
   importe: number;
   fechaHoraIngreso: Date;
   socio?: SocioRegistro;

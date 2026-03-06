@@ -36,6 +36,13 @@ const acciones = [
     color: "text-teal-600",
   },
   {
+    titulo: "Cobradores",
+    descripcion: "Configurar comisión y cuenta corriente de cobradores",
+    href: "/cobradores",
+    icon: DollarSign,
+    color: "text-emerald-600",
+  },
+  {
     titulo: "Reportes",
     descripcion: "Ver reportes de cobranza y morosidad",
     href: "/cobros/reportes",
@@ -55,7 +62,7 @@ export default function CobrosPage() {
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
           {acciones.map((accion) => (
             <Link key={accion.href} href={accion.href}>
               <Card className="h-full cursor-pointer transition-colors hover:border-primary">

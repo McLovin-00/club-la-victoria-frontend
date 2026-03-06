@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,14 +22,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CreditCard, CheckCircle, ScanBarcode, ChevronLeft, ChevronFirst, ChevronRight, ChevronLast, Search, X, Calendar } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CheckCircle, ChevronLeft, ChevronFirst, ChevronRight, ChevronLast, Search, X, Calendar } from "lucide-react";
 import { useCuotas, EstadoCuota } from "@/hooks/api/cobros/useCuotas";
-import { useRegistrarPago, MetodoPago } from "@/hooks/api/cobros/useRegistrarPago";
+import { useMetodosPago } from "@/hooks/api/cobros/useMetodosPago";
 import { usePagoMultiple } from "@/hooks/api/cobros/usePagoMultiple";
-import { ScannerPagosModal } from "@/components/cobros/ScannerPagosModal";
+import { useProcesarResultadosTarjetaCentro } from "@/hooks/api/cobros/useProcesarResultadosTarjetaCentro";
 import { PAGINACION } from "@/lib/constants";
 
 type FiltroEstado = "TODOS" | "PENDIENTE" | "PAGADA";
+type FiltroPestana = "sinTarjeta" | "conTarjeta";
 
 // Constantes para el selector de período (igual que en generar cuotas)
 const MESES = [
@@ -66,33 +68,45 @@ const getNombrePeriodo = (mes: string, anio: string) => {
 };
 
 export default function PagosPage() {
-  const [barcode, setBarcode] = useState("");
-  const [scannerOpen, setScannerOpen] = useState(false);
-  const [metodoPago, setMetodoPago] = useState<MetodoPago>(MetodoPago.EFECTIVO);
+  const [metodoPagoId, setMetodoPagoId] = useState<number>(0);
+  const { data: metodosPago } = useMetodosPago();
+
+  useEffect(() => {
+    if (metodosPago && metodosPago.length > 0 && !metodoPagoId) {
+      setMetodoPagoId(metodosPago[0].id);
+    }
+  }, [metodosPago, metodoPagoId]);
   
   // Estados para período (separados como en generar cuotas)
   const [mes, setMes] = useState("");
   const [anio, setAnio] = useState("");
   
   const [estadoFiltro, setEstadoFiltro] = useState<FiltroEstado>("PENDIENTE");
+  const [filtroPestana, setFiltroPestana] = useState<FiltroPestana>("sinTarjeta");
   const [busqueda, setBusqueda] = useState("");
   const [busquedaAplicada, setBusquedaAplicada] = useState("");
-  const [cuotasSeleccionadas, setCuotasSeleccionadas] = useState<string[]>([]);
+  const [cuotasSeleccionadas, setCuotasSeleccionadas] = useState<number[]>([]);
   const [page, setPage] = useState(1);
-  const limit = PAGINACION.TAMAÑO_PAGINA_POR_DEFECTO;
+  const limitPaginado = PAGINACION.TAMAÑO_PAGINA_POR_DEFECTO;
+  const [mostrarTodosRegistros, setMostrarTodosRegistros] = useState(false);
+  const [limitSinPaginacion, setLimitSinPaginacion] = useState<number>(limitPaginado);
+  const [seleccionMasivaPendiente, setSeleccionMasivaPendiente] = useState(false);
 
   // Construir período a partir de mes y año
   const periodoFiltro = mes && anio ? `${anio}-${mes}` : "";
+  const pageConsulta = mostrarTodosRegistros ? 1 : page;
+  const limitConsulta = mostrarTodosRegistros ? limitSinPaginacion : limitPaginado;
 
   // Construir filtros para la query
   const filtros = useMemo(() => {
     const filtrosQuery: {
       periodo?: string;
       estado?: EstadoCuota;
+      tarjetaCentro?: boolean;
       busqueda?: string;
       page: number;
       limit: number;
-    } = { page, limit };
+    } = { page: pageConsulta, limit: limitConsulta };
 
     if (periodoFiltro) {
       filtrosQuery.periodo = periodoFiltro;
@@ -102,16 +116,18 @@ export default function PagosPage() {
       filtrosQuery.estado = estadoFiltro as EstadoCuota;
     }
 
+    filtrosQuery.tarjetaCentro = filtroPestana === "conTarjeta";
+
     if (busquedaAplicada) {
       filtrosQuery.busqueda = busquedaAplicada;
     }
 
     return filtrosQuery;
-  }, [periodoFiltro, estadoFiltro, busquedaAplicada, page, limit]);
+  }, [periodoFiltro, estadoFiltro, filtroPestana, busquedaAplicada, pageConsulta, limitConsulta]);
 
   const { data, isLoading } = useCuotas(filtros);
-  const registrarPagoMutation = useRegistrarPago();
   const pagoMultipleMutation = usePagoMultiple();
+  const procesarResultadosTarjetaCentroMutation = useProcesarResultadosTarjetaCentro();
 
   // Handlers para período (como en generar cuotas)
   const handleMesChange = (newMes: string) => {
@@ -142,6 +158,12 @@ export default function PagosPage() {
     setPage(1);
   };
 
+  const handlePestanaChange = (value: string) => {
+    const nextValue: FiltroPestana = value === "conTarjeta" ? "conTarjeta" : "sinTarjeta";
+    setFiltroPestana(nextValue);
+    setPage(1);
+  };
+
   const handleBusquedaChange = (value: string) => {
     setBusqueda(value);
   };
@@ -160,25 +182,6 @@ export default function PagosPage() {
   const handleBusquedaKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       aplicarBusqueda();
-    }
-  };
-
-  const handleRegistrarPago = () => {
-    if (!barcode) return;
-
-    registrarPagoMutation.mutate(
-      { barcode, metodoPago },
-      {
-        onSuccess: () => {
-          setBarcode("");
-        },
-      }
-    );
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleRegistrarPago();
     }
   };
 
@@ -203,31 +206,122 @@ export default function PagosPage() {
     });
   };
 
-  const toggleSeleccion = (barcode?: string) => {
-    if (!barcode) {
+  const toggleSeleccion = (cuotaId?: number) => {
+    if (!cuotaId) {
       return;
     }
 
     setCuotasSeleccionadas((prev) =>
-      prev.includes(barcode)
-        ? prev.filter((b) => b !== barcode)
-        : [...prev, barcode]
+      prev.includes(cuotaId)
+        ? prev.filter((id) => id !== cuotaId)
+        : [...prev, cuotaId]
     );
   };
 
   const handleRegistrarPagosSeleccionados = () => {
-    if (cuotasSeleccionadas.length === 0) {
+    if (cuotasSeleccionadas.length === 0 || !metodoPagoId) {
       return;
     }
 
     pagoMultipleMutation.mutate(
-      { barcodes: cuotasSeleccionadas, metodoPago },
+      { cuotaIds: cuotasSeleccionadas, metodoPagoId },
       {
         onSuccess: () => {
           setCuotasSeleccionadas([]);
         },
       }
     );
+  };
+
+  const cuotasSeleccionables = useMemo(
+    () =>
+      (data?.cuotas ?? [])
+        .filter((cuota) => cuota.estado === EstadoCuota.PENDIENTE)
+        .map((cuota) => cuota.id),
+    [data?.cuotas]
+  );
+
+  const todasLasSeleccionablesMarcadas =
+    cuotasSeleccionables.length > 0 &&
+    cuotasSeleccionables.every((cuotaId) => cuotasSeleccionadas.includes(cuotaId));
+
+  const seleccionMasivaActiva = mostrarTodosRegistros && todasLasSeleccionablesMarcadas;
+
+  useEffect(() => {
+    if (!seleccionMasivaPendiente || isLoading || !data) {
+      return;
+    }
+
+    if (data.limit < data.total) {
+      return;
+    }
+
+    setCuotasSeleccionadas(cuotasSeleccionables);
+    setSeleccionMasivaPendiente(false);
+  }, [seleccionMasivaPendiente, isLoading, data, cuotasSeleccionables]);
+
+  const handleSeleccionarTodos = () => {
+    if (seleccionMasivaActiva) {
+      setCuotasSeleccionadas([]);
+      setSeleccionMasivaPendiente(false);
+      setMostrarTodosRegistros(false);
+      setLimitSinPaginacion(limitPaginado);
+      setPage(1);
+      return;
+    }
+
+    const totalRegistros = data?.total ?? 0;
+    if (totalRegistros === 0) {
+      return;
+    }
+
+    setPage(1);
+    setMostrarTodosRegistros(true);
+    setLimitSinPaginacion(Math.max(totalRegistros, limitPaginado));
+    setSeleccionMasivaPendiente(true);
+  };
+
+  const getCuotasSeleccionadasTarjetaCentro = () => {
+    const cuotas = data?.cuotas ?? [];
+    const cuotasIdsSeleccionadas = new Set(cuotasSeleccionadas);
+
+    return cuotas.filter(
+      (cuota) =>
+        cuota.estado === EstadoCuota.PENDIENTE &&
+        cuotasIdsSeleccionadas.has(cuota.id)
+    );
+  };
+
+  const handleMarcarSeleccionadasTarjetaCentro = (aprobada: boolean) => {
+    const cuotasTarjeta = getCuotasSeleccionadasTarjetaCentro();
+    if (cuotasTarjeta.length === 0) {
+      return;
+    }
+
+    procesarResultadosTarjetaCentroMutation.mutate(
+      {
+        resultados: cuotasTarjeta.map((cuota) => ({
+          cuotaId: cuota.id,
+          aprobada,
+        })),
+      },
+      {
+        onSuccess: () => {
+          setCuotasSeleccionadas([]);
+        },
+      }
+    );
+  };
+
+  const handleProcesarCuotaTarjetaCentro = (cuotaId: number, aprobada: boolean) => {
+    procesarResultadosTarjetaCentroMutation.mutate({
+      resultados: [
+        {
+          cuotaId,
+          aprobada,
+        },
+      ],
+    });
   };
 
   const totalPages = data?.totalPages || 1;
@@ -238,7 +332,7 @@ export default function PagosPage() {
     const partes: string[] = [];
     
     if (totalItems > 0) {
-      partes.push(`Mostrando ${((page - 1) * limit) + 1}-${Math.min(page * limit, totalItems)} de ${totalItems} cuotas`);
+      partes.push(`Mostrando ${((pageConsulta - 1) * limitConsulta) + 1}-${Math.min(pageConsulta * limitConsulta, totalItems)} de ${totalItems} cuotas`);
     }
     
     if (estadoFiltro !== "TODOS") {
@@ -254,78 +348,27 @@ export default function PagosPage() {
     if (busquedaAplicada) {
       partes.push(`búsqueda: "${busquedaAplicada}"`);
     }
+
+    partes.push(
+      filtroPestana === "conTarjeta"
+        ? "socios con tarjeta del centro"
+        : "socios sin tarjeta del centro"
+    );
     
     return partes.join(" - ");
   };
 
   return (
-    <DashboardLayout title="Registrar Pagos" description="Registre pagos de cuotas por código de barras">
+    <DashboardLayout title="Registrar Pagos" description="Registre pagos de cuotas desde el listado">
       <div className="space-y-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="page-header mb-0">
             <h1 className="page-title">Registrar pagos</h1>
             <p className="page-description">
-              Carga pagos por código de barras y consulta cuotas con filtros.
+              Registre pagos y consulte cuotas con filtros.
             </p>
           </div>
-
-          <Button onClick={() => setScannerOpen(true)} variant="outline" size="lg">
-            <ScanBarcode className="mr-2 h-5 w-5" />
-            Escáner Masivo
-          </Button>
         </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Registrar Pago por Barcode
-            </CardTitle>
-            <CardDescription>
-              Escanee el código de barras de la cuota (formato: MM-AAAA-idSocio, ej: 01-2026-123) para registrar el pago
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="grid gap-2">
-                <Label htmlFor="barcode">Código de Barras</Label>
-                <Input
-                  id="barcode"
-                  value={barcode}
-                  onChange={(e) => setBarcode(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="01-2026-123"
-                  className="font-mono"
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="metodo">Método de Pago</Label>
-                <Select value={metodoPago} onValueChange={(v) => setMetodoPago(v as MetodoPago)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={MetodoPago.EFECTIVO}>Efectivo</SelectItem>
-                    <SelectItem value={MetodoPago.TRANSFERENCIA}>Transferencia</SelectItem>
-                    <SelectItem value={MetodoPago.TARJETA_DEBITO}>Tarjeta de Débito</SelectItem>
-                    <SelectItem value={MetodoPago.TARJETA_CREDITO}>Tarjeta de Crédito</SelectItem>
-                    <SelectItem value={MetodoPago.OTRO}>Otro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-end">
-                <Button
-                  onClick={handleRegistrarPago}
-                  disabled={!barcode || registrarPagoMutation.isPending}
-                  className="w-full"
-                >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Registrar Pago
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         <Card>
           <CardHeader>
@@ -337,6 +380,13 @@ export default function PagosPage() {
           <CardContent>
             {/* Filtros */}
             <div className="space-y-4 mb-6 p-4 bg-muted/50 rounded-lg">
+              <Tabs value={filtroPestana} onValueChange={handlePestanaChange}>
+                <TabsList>
+                  <TabsTrigger value="sinTarjeta">Sin tarjeta del centro</TabsTrigger>
+                  <TabsTrigger value="conTarjeta">Con tarjeta del centro</TabsTrigger>
+                </TabsList>
+              </Tabs>
+
               {/* Fila 1: Buscador */}
               <div className="flex flex-col md:flex-row gap-4">
                 {/* Buscador por nombre/apellido/DNI */}
@@ -470,21 +520,81 @@ export default function PagosPage() {
                     {cuotasSeleccionadas.length} cuota{cuotasSeleccionadas.length !== 1 ? "s" : ""} seleccionada
                     {cuotasSeleccionadas.length !== 1 ? "s" : ""}
                   </p>
-                  <Button
-                    onClick={handleRegistrarPagosSeleccionados}
-                    disabled={cuotasSeleccionadas.length === 0 || pagoMultipleMutation.isPending}
-                  >
-                    {pagoMultipleMutation.isPending
-                      ? "Registrando pagos..."
-                      : "Registrar seleccionadas como pagadas"}
-                  </Button>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <Button
+                      variant="outline"
+                      onClick={handleSeleccionarTodos}
+                      disabled={totalItems === 0}
+                    >
+                      {seleccionMasivaActiva
+                        ? "Quitar seleccion masiva"
+                        : "Seleccionar todos los registros"}
+                    </Button>
+                    {filtroPestana === "conTarjeta" ? (
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <Button
+                          onClick={() => handleMarcarSeleccionadasTarjetaCentro(true)}
+                          disabled={
+                            cuotasSeleccionadas.length === 0 ||
+                            procesarResultadosTarjetaCentroMutation.isPending
+                          }
+                        >
+                          {procesarResultadosTarjetaCentroMutation.isPending
+                            ? "Procesando..."
+                            : "Marcar seleccionadas como aprobadas"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
+                          onClick={() => handleMarcarSeleccionadasTarjetaCentro(false)}
+                          disabled={
+                            cuotasSeleccionadas.length === 0 ||
+                            procesarResultadosTarjetaCentroMutation.isPending
+                          }
+                        >
+                          {procesarResultadosTarjetaCentroMutation.isPending
+                            ? "Procesando..."
+                            : "Marcar seleccionadas como rechazadas"}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                        <div className="grid gap-2">
+                          <Label htmlFor="metodo-pago">Método de pago</Label>
+                          <Select
+                            value={metodoPagoId ? String(metodoPagoId) : ""}
+                            onValueChange={(value) => setMetodoPagoId(Number(value))}
+                          >
+                            <SelectTrigger id="metodo-pago" className="min-w-[210px]">
+                              <SelectValue placeholder="Seleccione un método" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {metodosPago?.map((metodo) => (
+                                <SelectItem key={metodo.id} value={String(metodo.id)}>
+                                  {metodo.nombre}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <Button
+                          onClick={handleRegistrarPagosSeleccionados}
+                          disabled={cuotasSeleccionadas.length === 0 || pagoMultipleMutation.isPending}
+                        >
+                          {pagoMultipleMutation.isPending
+                            ? "Registrando pagos..."
+                            : "Registrar seleccionadas como pagadas"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-12"></TableHead>
-                      <TableHead>Barcode</TableHead>
                       <TableHead>Socio</TableHead>
                       <TableHead>DNI</TableHead>
                       <TableHead>Período</TableHead>
@@ -492,6 +602,7 @@ export default function PagosPage() {
                       <TableHead>Emisión cuota</TableHead>
                       <TableHead>Fecha pago</TableHead>
                       <TableHead>Estado</TableHead>
+                      {filtroPestana === "conTarjeta" && <TableHead>Resultado tarjeta</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -499,7 +610,7 @@ export default function PagosPage() {
                       <TableRow
                         key={cuota.id}
                         className={
-                          cuotasSeleccionadas.includes(cuota.barcode || "")
+                          cuotasSeleccionadas.includes(cuota.id)
                             ? "bg-primary/5"
                             : ""
                         }
@@ -507,14 +618,11 @@ export default function PagosPage() {
                         <TableCell>
                           <input
                             type="checkbox"
-                            checked={Boolean(cuota.barcode) && cuotasSeleccionadas.includes(cuota.barcode ?? "")}
-                            onChange={() => toggleSeleccion(cuota.barcode)}
-                            disabled={cuota.estado !== EstadoCuota.PENDIENTE || !cuota.barcode}
+                            checked={cuotasSeleccionadas.includes(cuota.id)}
+                            onChange={() => toggleSeleccion(cuota.id)}
+                            disabled={cuota.estado !== EstadoCuota.PENDIENTE}
                             className="h-4 w-4"
                           />
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {cuota.barcode}
                         </TableCell>
                         <TableCell>
                           {cuota.socio
@@ -544,13 +652,42 @@ export default function PagosPage() {
                             {cuota.estado}
                           </Badge>
                         </TableCell>
+                        {filtroPestana === "conTarjeta" && (
+                          <TableCell>
+                            {cuota.estado === EstadoCuota.PENDIENTE ? (
+                              <div className="flex flex-col gap-2 sm:flex-row">
+                                <Button
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700"
+                                  disabled={procesarResultadosTarjetaCentroMutation.isPending}
+                                  onClick={() => handleProcesarCuotaTarjetaCentro(cuota.id, true)}
+                                >
+                                  <CheckCircle className="mr-1 h-3 w-3" />
+                                  Aprobada
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                  disabled={procesarResultadosTarjetaCentroMutation.isPending}
+                                  onClick={() => handleProcesarCuotaTarjetaCentro(cuota.id, false)}
+                                >
+                                  <X className="mr-1 h-3 w-3" />
+                                  Rechazada
+                                </Button>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
 
                 {/* Controles de paginación */}
-                {totalPages > 1 && (
+                {!mostrarTodosRegistros && totalPages > 1 && (
                   <div className="flex items-center justify-between mt-4 pt-4 border-t">
                     <p className="text-sm text-muted-foreground">
                       Página {page} de {totalPages}
@@ -604,8 +741,6 @@ export default function PagosPage() {
           </CardContent>
         </Card>
       </div>
-
-      <ScannerPagosModal open={scannerOpen} onOpenChange={setScannerOpen} />
     </DashboardLayout>
   );
 }

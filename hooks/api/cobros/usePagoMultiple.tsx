@@ -3,11 +3,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/api/client";
 import { AxiosError } from "axios";
 import { adaptError, logError } from "@/lib/errors/error.adapter";
-import { MetodoPago } from "./useRegistrarPago";
+
 
 interface PagoMultipleRequest {
-  barcodes: string[];
-  metodoPago: MetodoPago;
+  cuotaIds: number[];
+  metodoPagoId: number;
   observaciones?: string;
 }
 

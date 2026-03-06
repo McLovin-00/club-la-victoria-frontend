@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -21,19 +21,22 @@ import {
 } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Loader2, RefreshCw, TrendingDown, TrendingUp, Users, Eye, AlertCircle } from 'lucide-react';
 
 import { useCuentasGrupoFamiliar } from '@/hooks/api/cobros/useCuentasGrupoFamiliar';
-const meses = Array.from({ length: 12 }, (_, i) => {
-  const date = new Date();
-  date.setMonth(date.getMonth() - 11 + i);
-  return date.toISOString().slice(0, 7); // "2024-01" format
-});
 
 const formatMes = (mesStr: string) => {
-  const [year, month] = mesStr.split('-');
-  const date = new Date(parseInt(year), parseInt(month) - 1);
-  return date.toLocaleDateString('es-AR', { month: 'short', year: '2-digit' }).replace('.', '');
+  const [, month] = mesStr.split('-');
+  const date = new Date(2000, parseInt(month, 10) - 1, 1);
+  return date.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '');
 };
 
 const renderEstadoMes = (cuotas: any[] | undefined, mes: string) => {
@@ -45,6 +48,22 @@ const renderEstadoMes = (cuotas: any[] | undefined, mes: string) => {
     return <span className="text-red-600 font-bold text-lg" aria-label="Adeudado">✗</span>;
   }
   return <span className="text-muted-foreground">-</span>;
+};
+
+const formatEstadoSocio = (estado?: string) => {
+  if (!estado) {
+    return '-';
+  }
+
+  const normalized = estado.toLowerCase();
+  if (normalized === 'activo') {
+    return 'Activo';
+  }
+  if (normalized === 'inactivo') {
+    return 'Inactivo';
+  }
+
+  return estado.charAt(0).toUpperCase() + estado.slice(1).toLowerCase();
 };
 
 interface CuentasGrupoDialogProps {
@@ -60,7 +79,20 @@ export function CuentasGrupoDialog({
   grupoId,
   grupoNombre,
 }: CuentasGrupoDialogProps) {
-  const { cuentas, isLoading, error, memberErrors } = useCuentasGrupoFamiliar(grupoId || 0);
+  const currentYear = new Date().getFullYear();
+  const [anioSeleccionado, setAnioSeleccionado] = useState(currentYear);
+
+  const aniosDisponibles = useMemo(
+    () => Array.from({ length: 8 }, (_, i) => currentYear - 5 + i),
+    [currentYear],
+  );
+
+  const meses = useMemo(
+    () => Array.from({ length: 12 }, (_, i) => `${anioSeleccionado}-${String(i + 1).padStart(2, '0')}`),
+    [anioSeleccionado],
+  );
+
+  const { cuentas, isLoading, error, memberErrors } = useCuentasGrupoFamiliar(grupoId || 0, anioSeleccionado);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("es-AR", {
@@ -73,16 +105,18 @@ export function CuentasGrupoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl w-[95vw]">
-        <DialogHeader>
-          <DialogTitle>Cuentas del Grupo: {grupoNombre}</DialogTitle>
+      <DialogContent className="flex max-h-[90vh] w-[98vw] flex-col overflow-hidden p-0 sm:w-[97vw] sm:max-w-[1400px]">
+        <DialogHeader className="border-b px-6 py-4 sm:px-8">
+          <DialogTitle className="pr-8 leading-tight sm:pr-10">
+            Cuentas del Grupo: {grupoNombre}
+          </DialogTitle>
           <DialogDescription>
             Resumen de cuentas del grupo familiar seleccionado
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4">
-          JQ|          {isLoading ? (
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4 sm:px-8">
+          {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
               <span className="ml-2 text-muted-foreground">Cargando cuentas...</span>
@@ -109,46 +143,46 @@ export function CuentasGrupoDialog({
             </div>
           ) : (
             <>
-              <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-                <Card className="border-l-4 border-l-green-500">
+              <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <Card className="min-w-0 border-l-4 border-l-green-500">
                   <CardContent className="pt-6">
-                    <div className="flex items-center gap-4">
+                    <div className="flex min-w-0 items-center gap-4">
                       <div className="rounded-lg bg-green-100 p-2">
                         <TrendingUp className="h-6 w-6 text-green-600" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-sm text-muted-foreground">Total Pagado</p>
-                        <p className="text-2xl font-bold text-green-600">
+                        <p className="text-xl font-bold text-green-600 sm:text-2xl">
                           {formatCurrency(cuentas?.totalPagado ?? 0)}
                         </p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border-l-4 border-l-red-500">
+                <Card className="min-w-0 border-l-4 border-l-red-500">
                   <CardContent className="pt-6">
-                    <div className="flex items-center gap-4">
+                    <div className="flex min-w-0 items-center gap-4">
                       <div className="rounded-lg bg-red-100 p-2">
                         <TrendingDown className="h-6 w-6 text-red-600" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-sm text-muted-foreground">Deuda Total</p>
-                        <p className="text-2xl font-bold text-red-600">
+                        <p className="text-xl font-bold text-red-600 sm:text-2xl">
                           {formatCurrency(cuentas?.totalDeuda ?? 0)}
                         </p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="border-l-4 border-l-amber-500">
+                <Card className="min-w-0 border-l-4 border-l-amber-500 sm:col-span-2 xl:col-span-1">
                   <CardContent className="pt-6">
-                    <div className="flex items-center gap-4">
+                    <div className="flex min-w-0 items-center gap-4">
                       <div className="rounded-lg bg-amber-100 p-2">
                         <Users className="h-6 w-6 text-amber-600" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-sm text-muted-foreground">Estado del Grupo</p>
-                        <p className="text-lg font-bold text-amber-600">
+                        <p className="text-base font-bold leading-tight text-amber-600 sm:text-lg">
                           {cuentas?.sociosAlDia ?? 0} al día, {cuentas?.sociosEnDeuda ?? 0} en deuda
                         </p>
                       </div>
@@ -157,15 +191,37 @@ export function CuentasGrupoDialog({
                 </Card>
               </div>
               <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-4">Estado por Miembro</h3>
-                <ScrollArea className="h-[400px] rounded-md border w-full">
-                  <Table className="min-w-max">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <h3 className="text-lg font-semibold">Estado por Miembro</h3>
+                  <div className="w-full sm:w-[180px]">
+                    <Select
+                      value={String(anioSeleccionado)}
+                      onValueChange={(value) => setAnioSeleccionado(Number.parseInt(value, 10))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar año" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {aniosDisponibles.map((anio) => (
+                          <SelectItem key={anio} value={String(anio)}>
+                            {anio}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <p className="mb-3 text-xs text-muted-foreground sm:hidden">
+                  Desliza la tabla hacia los lados para ver todos los meses.
+                </p>
+                <ScrollArea className="h-[min(52vh,430px)] w-full rounded-md border">
+                  <Table className="min-w-[1120px]">
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="min-w-[150px] sticky left-0 bg-background z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Nombre</TableHead>
+                        <TableHead className="min-w-[160px] sticky left-0 bg-background z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Nombre</TableHead>
+                        <TableHead className="min-w-[110px]">Estado</TableHead>
                         <TableHead>Deuda</TableHead>
-                        <TableHead>Pagado</TableHead>
-                        <TableHead>Meses Adeudados</TableHead>
+                        <TableHead className="min-w-[96px] text-center whitespace-nowrap">Meses Adeudados</TableHead>
                         {meses.map((mes) => (
                           <TableHead key={mes} className="text-center min-w-[60px] whitespace-nowrap">
                             {formatMes(mes)}
@@ -177,12 +233,21 @@ export function CuentasGrupoDialog({
                     <TableBody>
                       {cuentas.miembros.map((miembro) => {
                         const hasError = memberErrors?.some((e) => e.socioId === miembro.socioInfo.id);
+                        const isMoroso = miembro.socioInfo.estado?.toLowerCase() === 'moroso';
+                        const stickyBgClass = 'bg-background';
                         const cuotasPendientes =
                           miembro.cuenta?.cuotas.filter((c: any) => c.estado === 'PENDIENTE').length || 0;
 
                         return (
-                          <TableRow key={miembro.socioInfo.id}>
-                            <TableCell className="font-medium whitespace-nowrap sticky left-0 bg-background z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+                          <TableRow
+                            key={miembro.socioInfo.id}
+                            className={
+                              isMoroso
+                                ? 'group [&>td]:bg-red-500/5 hover:[&>td]:bg-red-500/10'
+                                : 'group hover:bg-transparent hover:[&>td]:bg-muted/50'
+                            }
+                          >
+                            <TableCell className={`font-medium whitespace-nowrap sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${stickyBgClass}`}>
                               <div className="flex items-center gap-2">
                                 <span>
                                   {miembro.socioInfo.nombre} {miembro.socioInfo.apellido}
@@ -200,21 +265,26 @@ export function CuentasGrupoDialog({
                                 )}
                               </div>
                             </TableCell>
+                            <TableCell>{formatEstadoSocio(miembro.socioInfo.estado)}</TableCell>
                             <TableCell>{miembro.cuenta ? formatCurrency(miembro.cuenta.totalDeuda) : '-'}</TableCell>
-                            <TableCell>{miembro.cuenta ? formatCurrency(miembro.cuenta.totalPagado) : '-'}</TableCell>
-                            <TableCell>{miembro.cuenta ? cuotasPendientes : '-'}</TableCell>
+                            <TableCell className="text-center">{miembro.cuenta ? cuotasPendientes : '-'}</TableCell>
                             {meses.map((mes) => (
                               <TableCell key={mes} className="text-center">
                                 {renderEstadoMes(miembro.cuenta?.cuotas, mes)}
                               </TableCell>
                             ))}
-                            <TableCell className="text-right sticky right-0 bg-background z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">
-                              <Button variant="ghost" size="icon" asChild>
-                                <Link href={`/socios/${miembro.socioInfo.id}/cuenta-corriente`}>
-                                  <Eye className="h-4 w-4" />
-                                  <span className="sr-only">Ver cuenta</span>
-                                </Link>
-                              </Button>
+                            <TableCell className={`text-right sticky right-0 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] ${stickyBgClass}`}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" asChild aria-label="Ver cuenta corriente">
+                                    <Link href={`/socios/${miembro.socioInfo.id}/cuenta-corriente`}>
+                                      <Eye className="h-4 w-4" />
+                                      <span className="sr-only">Ver cuenta</span>
+                                    </Link>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent sideOffset={8}>Ver cuenta corriente</TooltipContent>
+                              </Tooltip>
                             </TableCell>
                           </TableRow>
                         );
@@ -227,7 +297,7 @@ export function CuentasGrupoDialog({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="border-t px-6 py-4 sm:px-8">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cerrar
           </Button>

@@ -34,9 +34,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Users,
+  User,
   Plus,
   Pencil,
   Trash2,
@@ -327,47 +329,72 @@ export default function GruposFamiliaresPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openViewSociosDialog(grupo)}
-                            title="Ver socios"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openCuentasDialog(grupo)}
-                            title="Ver resumen de cuentas"
-                          >
-                            <Wallet className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openAssignDialog(grupo)}
-                            title="Asignar socios"
-                          >
-                            <UserPlus className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openEditDialog(grupo)}
-                            title="Editar"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDeleteDialog(grupo)}
-                            title="Eliminar"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openViewSociosDialog(grupo)}
+                                aria-label="Ver socios"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent sideOffset={8}>Ver socios</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openCuentasDialog(grupo)}
+                                aria-label="Ver resumen de cuentas"
+                              >
+                                <Wallet className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent sideOffset={8}>Ver resumen de cuentas</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openAssignDialog(grupo)}
+                                aria-label="Asignar socios"
+                              >
+                                <UserPlus className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent sideOffset={8}>Asignar socios</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEditDialog(grupo)}
+                                aria-label="Editar grupo"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent sideOffset={8}>Editar grupo</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openDeleteDialog(grupo)}
+                                aria-label="Eliminar grupo"
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent sideOffset={8}>Eliminar grupo</TooltipContent>
+                          </Tooltip>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -673,35 +700,51 @@ export default function GruposFamiliaresPage() {
               </div>
             ) : sociosEnGrupo && sociosEnGrupo.length > 0 ? (
               <ScrollArea className="h-[350px] border rounded-md">
-                <div className="divide-y">
+                <div className="space-y-3 p-3">
                   {sociosEnGrupo.map((socio) => (
                     <div
                       key={socio.id}
-                      className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+                      className="space-y-3 rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
                     >
-                      <div className="flex-1">
-                        <p className="font-medium">
-                          {socio.apellido}, {socio.nombre}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          DNI: {socio.dni || "Sin DNI"}
-                          {socio.telefono && ` | Tel: ${socio.telefono}`}
-                        </p>
+                      <div className="flex min-w-0 gap-3">
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-muted">
+                          <User className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate text-base font-semibold text-foreground">
+                            {socio.apellido}, {socio.nombre}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            DNI: {socio.dni || "Sin DNI"}
+                          </p>
+                          <p className="truncate text-sm text-muted-foreground">
+                            {socio.telefono ? `Tel: ${socio.telefono}` : "Sin telefono"}
+                          </p>
+                        </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDesasignarSocio(socio.id)}
-                        disabled={desasignarMutation.isPending}
-                        title="Quitar del grupo"
-                        className="text-destructive hover:text-destructive"
-                      >
-                        {desasignarMutation.isPending ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <UserMinus className="h-4 w-4" />
-                        )}
-                      </Button>
+
+                      <div className="flex items-center justify-end border-t border-border/50 pt-3">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDesasignarSocio(socio.id)}
+                              disabled={desasignarMutation.isPending}
+                              aria-label="Quitar socio del grupo"
+                              className="text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground bg-transparent"
+                            >
+                              {desasignarMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <UserMinus className="h-4 w-4" />
+                              )}
+                              <span className="ml-2">Quitar</span>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent sideOffset={8}>Quitar del grupo</TooltipContent>
+                        </Tooltip>
+                      </div>
                     </div>
                   ))}
                 </div>

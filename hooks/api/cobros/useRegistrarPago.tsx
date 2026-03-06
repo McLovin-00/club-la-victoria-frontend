@@ -6,29 +6,22 @@ import { AxiosError } from "axios";
 import { adaptError, logError } from "@/lib/errors/error.adapter";
 import { Cuota } from "./useCuotas";
 
-export enum MetodoPago {
-  EFECTIVO = "EFECTIVO",
-  TRANSFERENCIA = "TRANSFERENCIA",
-  TARJETA_DEBITO = "TARJETA_DEBITO",
-  TARJETA_CREDITO = "TARJETA_CREDITO",
-  OTRO = "OTRO",
-}
+import { MetodoPago } from "./useMetodosPago";
 
 interface PagoResponse {
   cuota: Cuota;
   pago: {
     id: number;
     montoPagado: number;
-    metodoPago: MetodoPago;
+    metodoPago: MetodoPago | string;
     fechaPago: string;
     fechaEmisionCuota?: string;
   };
 }
 
 interface RegistrarPagoDto {
-  barcode?: string;
-  cuotaId?: number;
-  metodoPago: MetodoPago;
+  cuotaId: number;
+  metodoPagoId: number;
   observaciones?: string;
 }
 
@@ -58,8 +51,8 @@ export const useRegistrarPago = () => {
 };
 
 interface RegistrarPagoMultipleDto {
-  barcodes: string[];
-  metodoPago: MetodoPago;
+  cuotaIds: number[];
+  metodoPagoId: number;
   observaciones?: string;
 }
 
