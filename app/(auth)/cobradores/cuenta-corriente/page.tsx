@@ -1,4 +1,5 @@
 "use client";
+import { MovementList } from "@/components/cuenta-corriente/movement-list";
 
 import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
@@ -204,40 +205,7 @@ export default function CuentaCorrienteCobradoresPage() {
           </CardContent>
         </Card>
 
-        {/* Movements List */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Movimientos del Período</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {filteredMovimientos.map((movimiento) => (
-                <div
-                  key={movimiento.id}
-                  className="flex items-center justify-between rounded-md border p-3 text-sm"
-                >
-                  <div>
-                    <p className="font-medium">{movimiento.tipoMovimiento}</p>
-                    <p className="text-muted-foreground">
-                      {movimiento.observacion ?? "Sin observación"}
-                    </p>
-                  </div>
-                  <p className="font-semibold">${movimiento.monto}</p>
-                </div>
-              ))}
-              {!filteredMovimientos.length && cobradorId > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Sin movimientos en el período actual.
-                </p>
-              )}
-              {cobradorId === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Seleccione un cobrador para ver sus movimientos.
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        <MovementList movimientos={filteredMovimientos} cobradorId={cobradorId} />
       </div>
     </DashboardLayout>
   );
