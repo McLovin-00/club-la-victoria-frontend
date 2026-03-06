@@ -1,6 +1,7 @@
+"use client";
+
 // components/cuenta-corriente/movement-list.tsx
 import { EmptyState } from "./empty-state";
-"use client";
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
