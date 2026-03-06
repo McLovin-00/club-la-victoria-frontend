@@ -78,6 +78,15 @@ export default function CuentaCorrienteCobradoresPage() {
     return aggregateMovimientosForChart(filteredMovimientos);
   }, [filteredMovimientos]);
 
+  // Check if active filters are applied
+  const hasActiveFilters = useMemo(() => {
+    const defaultRange = getDefaultDateRange();
+    return (
+      tipoMovimiento !== "TODOS" ||
+      startDate.toDateString() !== defaultRange.startDate.toDateString() ||
+      endDate.toDateString() !== defaultRange.endDate.toDateString()
+    );
+  }, [tipoMovimiento, startDate, endDate]);
   const handleDateRangeChange = (start: Date, end: Date) => {
     setStartDate(start);
     setEndDate(end);
@@ -205,7 +214,12 @@ export default function CuentaCorrienteCobradoresPage() {
           </CardContent>
         </Card>
 
-        <MovementList movimientos={filteredMovimientos} cobradorId={cobradorId} />
+        <MovementList 
+          movimientos={filteredMovimientos} 
+          cobradorId={cobradorId}
+          hasActiveFilters={hasActiveFilters}
+          onClearFilters={handleClearFilters}
+        />
       </div>
     </DashboardLayout>
   );

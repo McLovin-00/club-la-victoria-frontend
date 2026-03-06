@@ -1,4 +1,5 @@
 // components/cuenta-corriente/movement-list.tsx
+import { EmptyState } from "./empty-state";
 "use client";
 
 import { useState } from "react";
@@ -26,6 +27,8 @@ import {
 interface MovementListProps {
   movimientos: MovimientoCobrador[];
   cobradorId: number;
+  hasActiveFilters?: boolean;
+  onClearFilters?: () => void;
 }
 
 const MOVIMIENTO_CONFIG: Record<
@@ -54,36 +57,28 @@ const MOVIMIENTO_CONFIG: Record<
 
 const ITEMS_PER_PAGE = 10;
 
-export function MovementList({ movimientos, cobradorId }: MovementListProps) {
+export function MovementList({ 
+  movimientos, 
+  cobradorId,
+  hasActiveFilters = false,
+  onClearFilters,
+}: MovementListProps) {
   const [currentPage, setCurrentPage] = useState(1);
 
   if (cobradorId === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Movimientos del Período</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Seleccione un cobrador para ver sus movimientos.
-          </p>
-        </CardContent>
-      </Card>
+      <EmptyState 
+        hasActiveFilters={false}
+      />
     );
   }
 
   if (!movimientos || movimientos.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Movimientos del Período</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Sin movimientos en el período actual.
-          </p>
-        </CardContent>
-      </Card>
+      <EmptyState 
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={onClearFilters}
+      />
     );
   }
 
