@@ -22,11 +22,13 @@ import {
 } from "@/hooks/api/cobradores/useCobradorCuentaCorriente";
 import { SummarySection } from "@/components/cuenta-corriente/summary-section";
 import { TimeSeriesChart } from "@/components/cuenta-corriente/time-series-chart";
+import { FiltersSection } from "@/components/cuenta-corriente/filters-section";
 import {
   getDefaultDateRange,
   filterMovimientosByDateRange,
   calculatePeriodSummary,
   aggregateMovimientosForChart,
+  TipoMovimiento,
 } from "@/lib/cuenta-corriente-utils";
 
 export default function CuentaCorrienteCobradoresPage() {
@@ -35,19 +37,35 @@ export default function CuentaCorrienteCobradoresPage() {
   const [observacion, setObservacion] = useState("");
   const [referencia, setReferencia] = useState("");
 
-  // Get default date range (current month)
-  const { startDate, endDate } = useMemo(() => getDefaultDateRange(), []);
+  // Date range filter state
+  const [startDate, setStartDate] = useState<Date>(() => {
+    const { startDate } = getDefaultDateRange();
+    return startDate;
+  });
+  const [endDate, setEndDate] = useState<Date>(() => {
+    const { endDate } = getDefaultDateRange();
+    return endDate;
+  });
+
+  // Movement type filter state (instant filter)
+  const [tipoMovimiento, setTipoMovimiento] = useState<TipoMovimiento | "TODOS">("TODOS");
 
   const { data: cobradores } = useCobradoresActivos();
   const { data, isLoading } = useCuentaCorrienteCobrador(cobradorId);
   const pagoMutation = useRegistrarPagoCobrador(cobradorId);
   const ajusteMutation = useRegistrarAjusteCobrador(cobradorId);
 
-  // Filter movements by default date range (current month)
-  const filteredMovimientos = useMemo(() => {
+  // Filter movements by date range
+  const dateFilteredMovimientos = useMemo(() => {
     if (!data?.movimientos) return [];
     return filterMovimientosByDateRange(data.movimientos, startDate, endDate);
   }, [data?.movimientos, startDate, endDate]);
+
+  // Apply movement type filter (instant)
+  const filteredMovimientos = useMemo(() => {
+    if (tipoMovimiento === "TODOS") return dateFilteredMovimientos;
+    return dateFilteredMovimientos.filter((mov) => mov.tipoMovimiento === tipoMovimiento);
+  }, [dateFilteredMovimientos, tipoMovimiento]);
 
   // Calculate period summary from filtered movements
   const periodSummary = useMemo(() => {
@@ -58,6 +76,22 @@ export default function CuentaCorrienteCobradoresPage() {
   const chartData = useMemo(() => {
     return aggregateMovimientosForChart(filteredMovimientos);
   }, [filteredMovimientos]);
+
+  const handleDateRangeChange = (start: Date, end: Date) => {
+    setStartDate(start);
+    setEndDate(end);
+  };
+
+  const handleTipoMovimientoChange = (tipo: TipoMovimiento | "TODOS") => {
+    setTipoMovimiento(tipo);
+  };
+
+  const handleClearFilters = () => {
+    const { startDate, endDate } = getDefaultDateRange();
+    setStartDate(startDate);
+    setEndDate(endDate);
+    setTipoMovimiento("TODOS");
+  };
 
   const payload = {
     monto: Number(monto),
@@ -95,6 +129,18 @@ export default function CuentaCorrienteCobradoresPage() {
             </Select>
           </CardContent>
         </Card>
+
+        {/* Filters - Only show when cobrador is selected */}
+        {cobradorId > 0 && (
+          <FiltersSection
+            startDate={startDate}
+            endDate={endDate}
+            tipoMovimiento={tipoMovimiento}
+            onDateRangeChange={handleDateRangeChange}
+            onTipoMovimientoChange={handleTipoMovimientoChange}
+            onClearFilters={handleClearFilters}
+          />
+        )}
 
         {/* Summary Section - Only show when cobrador is selected */}
         {cobradorId > 0 && (
