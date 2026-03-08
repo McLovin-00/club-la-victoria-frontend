@@ -16,7 +16,11 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { MovimientoCobrador } from "@/hooks/api/cobradores/useCobradorCuentaCorriente";
-import { formatDate, formatCurrency, TipoMovimiento } from "@/lib/cuenta-corriente-utils";
+import {
+  formatDateTime,
+  formatCurrency,
+  TipoMovimiento,
+} from "@/lib/cuenta-corriente-utils";
 import {
   TrendingUp,
   CreditCard,
@@ -34,24 +38,24 @@ interface MovementListProps {
 
 const MOVIMIENTO_CONFIG: Record<
   TipoMovimiento,
-  { label: string; color: string; bgColor: string; icon: typeof TrendingUp }
+  { label: string; color: string; rowClass: string; icon: typeof TrendingUp }
 > = {
   COMISION_GENERADA: {
     label: "Comisión",
     color: "text-green-700",
-    bgColor: "bg-green-50 border-green-200",
+    rowClass: "border-l-green-600 bg-green-50/40",
     icon: TrendingUp,
   },
   PAGO_A_COBRADOR: {
     label: "Pago",
     color: "text-blue-700",
-    bgColor: "bg-blue-50 border-blue-200",
+    rowClass: "border-l-blue-600 bg-blue-50/40",
     icon: CreditCard,
   },
   AJUSTE: {
     label: "Ajuste",
     color: "text-orange-700",
-    bgColor: "bg-orange-50 border-orange-200",
+    rowClass: "border-l-orange-500 bg-orange-50/40",
     icon: RefreshCw,
   },
 };
@@ -117,27 +121,29 @@ export function MovementList({
             return (
               <div
                 key={movimiento.id}
-                className={`flex items-start justify-between rounded-lg border p-4 ${config.bgColor}`}
+                className={`flex flex-col gap-3 rounded-lg border border-l-4 p-4 md:flex-row md:items-start md:justify-between ${config.rowClass}`}
               >
                 <div className="flex items-start gap-3">
-                  {/* Icon */}
                   <div className={`mt-0.5 ${config.color}`}>
                     <Icon className="h-5 w-5" />
                   </div>
 
-                  {/* Content */}
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <p className="font-medium">{config.label}</p>
-                      <Badge variant="outline" className="text-xs">
-                        {movimiento.tipoMovimiento}
+                      <Badge variant="secondary" className="text-[11px] font-medium">
+                        {movimiento.tipoMovimiento.replaceAll("_", " ")}
                       </Badge>
                     </div>
 
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        <span>{formatDate(movimiento.createdAt)}</span>
+                        <span>
+                          {formatDateTime(
+                            movimiento.detalleCobro?.fechaHoraCobro ?? movimiento.createdAt,
+                          )}
+                        </span>
                       </div>
 
                       {movimiento.referencia && (
@@ -153,11 +159,30 @@ export function MovementList({
                         {movimiento.observacion}
                       </p>
                     )}
+
+                    {movimiento.detalleCobro && (
+                      <div className="rounded-md border bg-background/70 px-2 py-1.5 text-xs text-muted-foreground">
+                        {movimiento.detalleCobro.socio && (
+                          <p>
+                            Socio: {movimiento.detalleCobro.socio.apellido}, {movimiento.detalleCobro.socio.nombre}
+                          </p>
+                        )}
+                        {movimiento.detalleCobro.cuotas.length > 0 && (
+                          <p>
+                            Cuotas: {movimiento.detalleCobro.cuotas
+                              .map((cuota: { cuotaId?: number; periodo?: string }) => {
+                                const periodo = cuota.periodo ? ` (${cuota.periodo})` : "";
+                                return periodo.replace(/[()]/g, "").trim();
+                              })
+                              .join(", ")}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Amount */}
-                <div className="text-right">
+                <div className="text-left md:text-right">
                   <p className={`text-lg font-semibold ${config.color}`}>
                     {formatCurrency(movimiento.monto)}
                   </p>

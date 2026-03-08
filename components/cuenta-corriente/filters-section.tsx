@@ -1,10 +1,14 @@
 // components/cuenta-corriente/filters-section.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Select,
   SelectContent,
@@ -12,10 +16,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarIcon, X } from "lucide-react";
+import { CalendarIcon, ChevronDown, X } from "lucide-react";
 import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { TipoMovimiento } from "@/lib/cuenta-corriente-utils";
+import {
+  DateRangePreset,
+  TipoMovimiento,
+  getDateRangeFromPreset,
+  getDefaultDateRange,
+  getPresetFromDateRange,
+} from "@/lib/cuenta-corriente-utils";
 
 interface FiltersSectionProps {
   startDate: Date;
@@ -33,6 +42,16 @@ const TIPO_MOVIMIENTO_LABELS: Record<TipoMovimiento | "TODOS", string> = {
   AJUSTE: "Ajustes",
 };
 
+const DATE_RANGE_PRESET_LABELS: Record<DateRangePreset | "CUSTOM", string> = {
+  TODAY: "Hoy",
+  THIS_WEEK: "Esta semana",
+  LAST_MONTH: "Mes pasado",
+  THIS_MONTH: "Este mes",
+  THIS_YEAR: "Este año",
+  LAST_YEAR: "Año pasado",
+  CUSTOM: "Rango personalizado",
+};
+
 export function FiltersSection({
   startDate,
   endDate,
@@ -43,11 +62,29 @@ export function FiltersSection({
 }: FiltersSectionProps) {
   const [tempStartDate, setTempStartDate] = useState(startDate);
   const [tempEndDate, setTempEndDate] = useState(endDate);
+  const [selectedPreset, setSelectedPreset] = useState<DateRangePreset | "CUSTOM">(
+    getPresetFromDateRange(startDate, endDate),
+  );
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+
+  useEffect(() => {
+    setTempStartDate(startDate);
+    setTempEndDate(endDate);
+    setSelectedPreset(getPresetFromDateRange(startDate, endDate));
+    setHasPendingChanges(false);
+  }, [startDate, endDate]);
+
+  useEffect(() => {
+    if (hasPendingChanges) {
+      setIsAdvancedOpen(true);
+    }
+  }, [hasPendingChanges]);
 
   const handleStartDateChange = (value: string) => {
     const newDate = new Date(value);
     setTempStartDate(newDate);
+    setSelectedPreset("CUSTOM");
     setHasPendingChanges(true);
   };
 
@@ -55,24 +92,52 @@ export function FiltersSection({
     const newDate = new Date(value);
     newDate.setHours(23, 59, 59); // End of day
     setTempEndDate(newDate);
+    setSelectedPreset("CUSTOM");
     setHasPendingChanges(true);
+  };
+
+  const handlePresetChange = (value: string) => {
+    if (value === "CUSTOM") {
+      setSelectedPreset("CUSTOM");
+      return;
+    }
+
+    const preset = value as DateRangePreset;
+    const range = getDateRangeFromPreset(preset);
+    setSelectedPreset(preset);
+    setTempStartDate(range.startDate);
+    setTempEndDate(range.endDate);
+    onDateRangeChange(range.startDate, range.endDate);
+    setHasPendingChanges(false);
   };
 
   const handleApplyDateRange = () => {
     onDateRangeChange(tempStartDate, tempEndDate);
+    setSelectedPreset(getPresetFromDateRange(tempStartDate, tempEndDate));
     setHasPendingChanges(false);
   };
 
   const handleCancelChanges = () => {
     setTempStartDate(startDate);
     setTempEndDate(endDate);
+    setSelectedPreset(getPresetFromDateRange(startDate, endDate));
     setHasPendingChanges(false);
   };
 
+  const handleClearAllFilters = () => {
+    onClearFilters();
+    const defaults = getDefaultDateRange();
+    setTempStartDate(defaults.startDate);
+    setTempEndDate(defaults.endDate);
+    setSelectedPreset("THIS_MONTH");
+    setHasPendingChanges(false);
+  };
+
+  const defaults = getDefaultDateRange();
   const hasActiveFilters =
     tipoMovimiento !== "TODOS" ||
-    startDate.toDateString() !== new Date(new Date().getFullYear(), new Date().getMonth(), 1).toDateString() ||
-    endDate.toDateString() !== new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toDateString();
+    startDate.toDateString() !== defaults.startDate.toDateString() ||
+    endDate.toDateString() !== defaults.endDate.toDateString();
 
   return (
     <Card>
@@ -83,90 +148,114 @@ export function FiltersSection({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onClearFilters}
+              onClick={handleClearAllFilters}
               className="h-8 px-2 text-xs"
             >
               <X className="mr-1 h-3 w-3" />
-              Limpiar filtros
+              Restablecer
             </Button>
           )}
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid gap-4 md:grid-cols-3">
-          {/* Tipo de Movimiento - Instant filter */}
+        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
           <div className="space-y-2">
             <label className="text-sm font-medium">Tipo de movimiento</label>
-            <div className="flex items-center gap-2">
-              <Select
-                value={tipoMovimiento}
-                onValueChange={(value) =>
-                  onTipoMovimientoChange(value as TipoMovimiento | "TODOS")
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(TIPO_MOVIMIENTO_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Badge variant="secondary" className="text-xs whitespace-nowrap">
-                Aplica al instante
-              </Badge>
-            </div>
-          </div>
-
-          {/* Date Range - Requires Apply */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Fecha desde</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={format(tempStartDate, "yyyy-MM-dd")}
-                onChange={(e) => handleStartDateChange(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-            </div>
+            <Select
+              value={tipoMovimiento}
+              onValueChange={(value) =>
+                onTipoMovimientoChange(value as TipoMovimiento | "TODOS")
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(TIPO_MOVIMIENTO_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Fecha hasta</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={format(tempEndDate, "yyyy-MM-dd")}
-                onChange={(e) => handleEndDateChange(e.target.value)}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-              />
-              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-            </div>
+            <label className="text-sm font-medium">Período rápido</label>
+            <Select value={selectedPreset} onValueChange={handlePresetChange}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(DATE_RANGE_PRESET_LABELS).map(([value, label]) => (
+                  <SelectItem key={value} value={value}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        {/* Apply/Cancel buttons for date range */}
-        {hasPendingChanges && (
-          <div className="mt-4 flex items-center gap-2 border-t pt-4">
-            <Button size="sm" onClick={handleApplyDateRange}>
-              Aplicar rango de fechas
-            </Button>
+        <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
+          <CollapsibleTrigger asChild>
             <Button
-              size="sm"
-              variant="outline"
-              onClick={handleCancelChanges}
+              type="button"
+              variant="ghost"
+              className="mt-3 h-8 px-2 text-xs text-muted-foreground"
             >
-              Cancelar
+              <ChevronDown
+                className={`mr-1 h-4 w-4 transition-transform ${isAdvancedOpen ? "rotate-180" : ""}`}
+              />
+              Filtros avanzados por fecha
             </Button>
-            <span className="text-xs text-muted-foreground">
-              Los cambios en el rango de fechas requieren aplicar
-            </span>
-          </div>
-        )}
+          </CollapsibleTrigger>
+
+          <CollapsibleContent className="mt-2 space-y-4 border-t pt-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Fecha desde</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={format(tempStartDate, "yyyy-MM-dd")}
+                    onChange={(e) => handleStartDateChange(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Fecha hasta</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="date"
+                    value={format(tempEndDate, "yyyy-MM-dd")}
+                    onChange={(e) => handleEndDateChange(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </div>
+            </div>
+
+            {hasPendingChanges && (
+              <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/20 px-3 py-2">
+                <Button size="sm" onClick={handleApplyDateRange}>
+                  Aplicar rango
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleCancelChanges}>
+                  Cancelar
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Tenés cambios pendientes en el rango de fechas.
+                </span>
+              </div>
+            )}
+          </CollapsibleContent>
+        </Collapsible>
+
       </CardContent>
     </Card>
   );

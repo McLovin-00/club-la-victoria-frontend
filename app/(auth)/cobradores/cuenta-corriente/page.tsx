@@ -4,6 +4,7 @@ import { MovementList } from "@/components/cuenta-corriente/movement-list";
 import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,7 +15,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { useCobradoresActivos } from "@/hooks/api/cobradores/useCobradoresActivos";
 import {
   useCuentaCorrienteCobrador,
@@ -22,15 +22,14 @@ import {
   useRegistrarPagoCobrador,
 } from "@/hooks/api/cobradores/useCobradorCuentaCorriente";
 import { SummarySection } from "@/components/cuenta-corriente/summary-section";
-import { TimeSeriesChart } from "@/components/cuenta-corriente/time-series-chart";
 import { FiltersSection } from "@/components/cuenta-corriente/filters-section";
 import {
   getDefaultDateRange,
   filterMovimientosByDateRange,
   calculatePeriodSummary,
-  aggregateMovimientosForChart,
   TipoMovimiento,
 } from "@/lib/cuenta-corriente-utils";
+import { UserRound } from "lucide-react";
 
 export default function CuentaCorrienteCobradoresPage() {
   const [cobradorId, setCobradorId] = useState(0);
@@ -73,11 +72,6 @@ export default function CuentaCorrienteCobradoresPage() {
     return calculatePeriodSummary(filteredMovimientos);
   }, [filteredMovimientos]);
 
-  // Aggregate movements for time series chart
-  const chartData = useMemo(() => {
-    return aggregateMovimientosForChart(filteredMovimientos);
-  }, [filteredMovimientos]);
-
   // Check if active filters are applied
   const hasActiveFilters = useMemo(() => {
     const defaultRange = getDefaultDateRange();
@@ -116,110 +110,116 @@ export default function CuentaCorrienteCobradoresPage() {
       description="Movimientos y saldo por cobrador"
     >
       <div className="space-y-6">
-        {/* Cobrador Selector */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Seleccionar cobrador</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Select
-              value={cobradorId ? String(cobradorId) : ""}
-              onValueChange={(value) => setCobradorId(Number(value))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccione cobrador" />
-              </SelectTrigger>
-              <SelectContent>
-                {cobradores?.map((cobrador) => (
-                  <SelectItem key={cobrador.id} value={String(cobrador.id)}>
-                    {cobrador.nombre}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <Card className="py-3">
+          <CardContent className="py-0">
+            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+              <div className="space-y-2">
+                <Label htmlFor="cobrador-selector">Cobrador</Label>
+                <Select
+                  value={cobradorId ? String(cobradorId) : ""}
+                  onValueChange={(value) => setCobradorId(Number(value))}
+                >
+                  <SelectTrigger id="cobrador-selector">
+                    <SelectValue placeholder="Seleccioná un cobrador" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {cobradores?.map((cobrador) => (
+                      <SelectItem key={cobrador.id} value={String(cobrador.id)}>
+                        {cobrador.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="rounded-md border bg-muted/20 px-3 py-1.5 text-xs text-muted-foreground">
+                {cobradorId > 0
+                  ? "Vista enfocada: resumen, filtros y movimientos."
+                  : "Elegí un cobrador para cargar la cuenta corriente."}
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Filters - Only show when cobrador is selected */}
-        {cobradorId > 0 && (
-          <FiltersSection
-            startDate={startDate}
-            endDate={endDate}
-            tipoMovimiento={tipoMovimiento}
-            onDateRangeChange={handleDateRangeChange}
-            onTipoMovimientoChange={handleTipoMovimientoChange}
-            onClearFilters={handleClearFilters}
-          />
-        )}
+        {cobradorId === 0 ? (
+          <Alert>
+            <UserRound className="h-4 w-4" />
+            <AlertTitle>Seleccioná un cobrador para comenzar</AlertTitle>
+            <AlertDescription>
+              Mostramos la información en pasos para que la pantalla sea más clara: primero elegí
+              el cobrador y luego vas a ver filtros, resumen y movimientos.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <div className="space-y-6">
+            <FiltersSection
+              startDate={startDate}
+              endDate={endDate}
+              tipoMovimiento={tipoMovimiento}
+              onDateRangeChange={handleDateRangeChange}
+              onTipoMovimientoChange={handleTipoMovimientoChange}
+              onClearFilters={handleClearFilters}
+            />
 
-        {/* Summary Section - Only show when cobrador is selected */}
-        {cobradorId > 0 && (
-          <>
             <SummarySection
               saldoActual={data?.saldo ?? 0}
               periodSummary={periodSummary}
               isLoading={isLoading}
             />
 
-            {/* Time Series Chart */}
-            <TimeSeriesChart data={chartData} isLoading={isLoading} />
+            <Card>
+              <CardHeader>
+                <CardTitle>Registrar movimiento</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-2">
+                  <Label>Monto</Label>
+                  <Input
+                    type="number"
+                    value={monto}
+                    onChange={(e) => setMonto(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Referencia</Label>
+                  <Input
+                    value={referencia}
+                    onChange={(e) => setReferencia(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Observación</Label>
+                  <Input
+                    value={observacion}
+                    onChange={(e) => setObservacion(e.target.value)}
+                  />
+                </div>
+                <div className="flex items-end gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={pagoMutation.isPending}
+                    onClick={() => pagoMutation.mutate(payload)}
+                  >
+                    Registrar pago
+                  </Button>
+                  <Button
+                    disabled={ajusteMutation.isPending}
+                    onClick={() => ajusteMutation.mutate(payload)}
+                  >
+                    Registrar ajuste
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
 
-            <Separator />
-          </>
+            <MovementList
+              movimientos={filteredMovimientos}
+              cobradorId={cobradorId}
+              hasActiveFilters={hasActiveFilters}
+              onClearFilters={handleClearFilters}
+            />
+          </div>
         )}
-
-        {/* Register Movement Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Registrar movimiento</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 md:grid-cols-4">
-            <div className="space-y-2">
-              <Label>Monto</Label>
-              <Input
-                type="number"
-                value={monto}
-                onChange={(e) => setMonto(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Referencia</Label>
-              <Input
-                value={referencia}
-                onChange={(e) => setReferencia(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Observación</Label>
-              <Input
-                value={observacion}
-                onChange={(e) => setObservacion(e.target.value)}
-              />
-            </div>
-            <div className="flex items-end gap-2">
-              <Button
-                variant="outline"
-                disabled={cobradorId <= 0 || pagoMutation.isPending}
-                onClick={() => pagoMutation.mutate(payload)}
-              >
-                Registrar pago
-              </Button>
-              <Button
-                disabled={cobradorId <= 0 || ajusteMutation.isPending}
-                onClick={() => ajusteMutation.mutate(payload)}
-              >
-                Registrar ajuste
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <MovementList 
-          movimientos={filteredMovimientos} 
-          cobradorId={cobradorId}
-          hasActiveFilters={hasActiveFilters}
-          onClearFilters={handleClearFilters}
-        />
       </div>
     </DashboardLayout>
   );

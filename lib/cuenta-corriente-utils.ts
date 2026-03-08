@@ -2,6 +2,13 @@
 import { MovimientoCobrador } from "@/hooks/api/cobradores/useCobradorCuentaCorriente";
 
 export type TipoMovimiento = "COMISION_GENERADA" | "PAGO_A_COBRADOR" | "AJUSTE";
+export type DateRangePreset =
+  | "TODAY"
+  | "THIS_WEEK"
+  | "LAST_MONTH"
+  | "THIS_MONTH"
+  | "THIS_YEAR"
+  | "LAST_YEAR";
 
 export interface PeriodSummary {
   totalComisiones: number;
@@ -113,6 +120,83 @@ export function getDefaultDateRange(): { startDate: Date; endDate: Date } {
   return { startDate, endDate };
 }
 
+export function getDateRangeFromPreset(
+  preset: DateRangePreset,
+): { startDate: Date; endDate: Date } {
+  const now = new Date();
+
+  switch (preset) {
+    case "TODAY": {
+      const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endDate = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        23,
+        59,
+        59,
+      );
+      return { startDate, endDate };
+    }
+    case "THIS_WEEK": {
+      const day = now.getDay();
+      const diffToMonday = day === 0 ? -6 : 1 - day;
+      const startDate = new Date(now);
+      startDate.setDate(now.getDate() + diffToMonday);
+      startDate.setHours(0, 0, 0, 0);
+
+      const endDate = new Date(startDate);
+      endDate.setDate(startDate.getDate() + 6);
+      endDate.setHours(23, 59, 59, 0);
+      return { startDate, endDate };
+    }
+    case "LAST_MONTH": {
+      const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+      return { startDate, endDate };
+    }
+    case "THIS_MONTH": {
+      return getDefaultDateRange();
+    }
+    case "THIS_YEAR": {
+      const startDate = new Date(now.getFullYear(), 0, 1);
+      const endDate = new Date(now.getFullYear(), 11, 31, 23, 59, 59);
+      return { startDate, endDate };
+    }
+    case "LAST_YEAR": {
+      const startDate = new Date(now.getFullYear() - 1, 0, 1);
+      const endDate = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59);
+      return { startDate, endDate };
+    }
+  }
+}
+
+export function getPresetFromDateRange(
+  startDate: Date,
+  endDate: Date,
+): DateRangePreset | "CUSTOM" {
+  const presets: DateRangePreset[] = [
+    "TODAY",
+    "THIS_WEEK",
+    "LAST_MONTH",
+    "THIS_MONTH",
+    "THIS_YEAR",
+    "LAST_YEAR",
+  ];
+
+  for (const preset of presets) {
+    const range = getDateRangeFromPreset(preset);
+    if (
+      range.startDate.getTime() === startDate.getTime() &&
+      range.endDate.getTime() === endDate.getTime()
+    ) {
+      return preset;
+    }
+  }
+
+  return "CUSTOM";
+}
+
 /**
  * Format currency for display
  */
@@ -134,6 +218,17 @@ export function formatDate(dateString: string): string {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+  }).format(date);
+}
+
+export function formatDateTime(dateString: string): string {
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(date);
 }
 

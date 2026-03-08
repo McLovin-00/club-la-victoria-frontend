@@ -121,9 +121,9 @@ export default function CategoriasPage() {
                     <TableHead>Categoría</TableHead>
                     <TableHead>Descripción</TableHead>
                     <TableHead>Monto Mensual</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+<TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
+
                 </TableHeader>
                 <TableBody>
                   {categorias.map((categoria) => (

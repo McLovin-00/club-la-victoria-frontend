@@ -9,6 +9,19 @@ export interface MovimientoCobrador {
   observacion?: string;
   referencia?: string;
   createdAt: string;
+  detalleCobro?: {
+    fechaHoraCobro: string;
+    socio?: {
+      id: number;
+      nombre: string;
+      apellido: string;
+    };
+    cuotas: Array<{
+      cuotaId?: number;
+      periodo?: string;
+      monto: number;
+    }>;
+  };
 }
 
 export interface CuentaCorrienteCobrador {

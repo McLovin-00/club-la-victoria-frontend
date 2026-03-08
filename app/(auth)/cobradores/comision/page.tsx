@@ -23,7 +23,7 @@ const todayIso = new Date().toISOString();
 
 export default function ComisionCobradoresPage() {
   const [cobradorId, setCobradorId] = useState(0);
-  const [porcentaje, setPorcentaje] = useState("0.1");
+  const [porcentaje, setPorcentaje] = useState("10");
   const [desde, setDesde] = useState(todayIso.slice(0, 10));
   const [hasta, setHasta] = useState(todayIso.slice(0, 10));
   const [vigenteDesde, setVigenteDesde] = useState(todayIso);
@@ -68,11 +68,11 @@ export default function ComisionCobradoresPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Porcentaje</Label>
+              <Label>Porcentaje (%)</Label>
               <Input
                 type="number"
                 min="0"
-                step="0.0001"
+                step="0.01"
                 value={porcentaje}
                 onChange={(e) => setPorcentaje(e.target.value)}
               />
@@ -93,7 +93,7 @@ export default function ComisionCobradoresPage() {
                 disabled={cobradorId <= 0 || configMutation.isPending}
                 onClick={() =>
                   configMutation.mutate({
-                    porcentaje: Number(porcentaje),
+                    porcentaje: Number(porcentaje) / 100,
                     vigenteDesde,
                   })
                 }
