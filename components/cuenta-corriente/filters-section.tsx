@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Collapsible,
   CollapsibleContent,
@@ -16,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarIcon, ChevronDown, X } from "lucide-react";
+import { CalendarIcon, ChevronDown, X, Search } from "lucide-react";
 import { format } from "date-fns";
 import {
   DateRangePreset,
@@ -30,8 +31,10 @@ interface FiltersSectionProps {
   startDate: Date;
   endDate: Date;
   tipoMovimiento: TipoMovimiento | "TODOS";
+  busquedaSocio: string;
   onDateRangeChange: (start: Date, end: Date) => void;
   onTipoMovimientoChange: (tipo: TipoMovimiento | "TODOS") => void;
+  onBusquedaSocioChange: (busqueda: string) => void;
   onClearFilters: () => void;
 }
 
@@ -56,8 +59,10 @@ export function FiltersSection({
   startDate,
   endDate,
   tipoMovimiento,
+  busquedaSocio,
   onDateRangeChange,
   onTipoMovimientoChange,
+  onBusquedaSocioChange,
   onClearFilters,
 }: FiltersSectionProps) {
   const [tempStartDate, setTempStartDate] = useState(startDate);
@@ -136,6 +141,7 @@ export function FiltersSection({
   const defaults = getDefaultDateRange();
   const hasActiveFilters =
     tipoMovimiento !== "TODOS" ||
+    busquedaSocio.trim() !== "" ||
     startDate.toDateString() !== defaults.startDate.toDateString() ||
     endDate.toDateString() !== defaults.endDate.toDateString();
 
@@ -159,6 +165,22 @@ export function FiltersSection({
       </CardHeader>
       <CardContent>
         <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {/* Buscador de socio */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Buscar socio</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Nombre, apellido o DNI..."
+                value={busquedaSocio}
+                onChange={(e) => onBusquedaSocioChange(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+
+          {/* Tipo de movimiento */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Tipo de movimiento</label>
             <Select
@@ -180,6 +202,7 @@ export function FiltersSection({
             </Select>
           </div>
 
+          {/* Período rápido */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Período rápido</label>
             <Select value={selectedPreset} onValueChange={handlePresetChange}>

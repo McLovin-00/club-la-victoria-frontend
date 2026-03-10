@@ -52,15 +52,17 @@ export function calculatePeriodSummary(
   };
 
   movimientos.forEach((mov) => {
+    // Convertir monto a número (puede venir como string desde el backend)
+    const monto = Number(mov.monto) || 0;
     switch (mov.tipoMovimiento) {
       case "COMISION_GENERADA":
-        summary.totalComisiones += mov.monto;
+        summary.totalComisiones += monto;
         break;
       case "PAGO_A_COBRADOR":
-        summary.totalPagos += mov.monto;
+        summary.totalPagos += monto;
         break;
       case "AJUSTE":
-        summary.totalAjustes += mov.monto;
+        summary.totalAjustes += monto;
         break;
     }
   });
@@ -94,15 +96,14 @@ export function aggregateMovimientosForChart(
     }
 
     const dataPoint = dateMap.get(dateKey)!;
+    // Convertir monto a número (puede venir como string desde el backend)
+    const monto = Number(mov.monto) || 0;
     switch (mov.tipoMovimiento) {
       case "COMISION_GENERADA":
-        dataPoint.comisiones += mov.monto;
+        dataPoint.comisiones += monto;
         break;
       case "PAGO_A_COBRADOR":
-        dataPoint.pagos += mov.monto;
-        break;
-      case "AJUSTE":
-        dataPoint.ajustes += mov.monto;
+        dataPoint.pagos += monto;
         break;
     }
   });

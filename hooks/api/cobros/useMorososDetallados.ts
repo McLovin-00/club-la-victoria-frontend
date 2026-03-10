@@ -4,7 +4,7 @@ import { STALE_TIME } from "@/lib/constants";
 
 // ==================== TIPOS ====================
 
-export type SeveridadMoroso = "todos" | "3-meses" | "4-meses" | "6-meses";
+export type SeveridadMoroso = "todos" | "3-meses" | "4-meses";
 
 export interface UltimoPago {
   fecha: string;

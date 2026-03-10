@@ -3,21 +3,13 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { MorososStats as MorososStatsType } from "@/hooks/api/cobros/useMorososDetallados"
 import { Users, DollarSign, AlertTriangle, Clock } from "lucide-react"
+import { formatCurrency } from "@/lib/cuenta-corriente-utils"
 
 interface MorososStatsProps {
   estadisticas: MorososStatsType
 }
 
 export function MorososStats({ estadisticas }: MorososStatsProps) {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-AR", {
-      style: "currency",
-      currency: "ARS",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
-  }
-
   const stats = [
     {
       title: "Total Morosos",
@@ -34,22 +26,15 @@ export function MorososStats({ estadisticas }: MorososStatsProps) {
       bgColor: "bg-orange-50 dark:bg-orange-950/30",
     },
     {
-      title: "3 Meses (Advertencia)",
+      title: "3 Meses",
       value: estadisticas.tresMeses,
       icon: Clock,
       color: "text-yellow-500",
       bgColor: "bg-yellow-50 dark:bg-yellow-950/30",
     },
     {
-      title: "4-5 Meses (Critico)",
-      value: estadisticas.cuatroMeses,
-      icon: AlertTriangle,
-      color: "text-orange-600",
-      bgColor: "bg-orange-50 dark:bg-orange-950/30",
-    },
-    {
-      title: "6+ Meses (Severo)",
-      value: estadisticas.seisMeses,
+      title: "4+ Meses",
+      value: estadisticas.cuatroMeses + estadisticas.seisMeses,
       icon: AlertTriangle,
       color: "text-red-600",
       bgColor: "bg-red-50 dark:bg-red-950/30",

@@ -35,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 import {
   Select,
   SelectContent,
@@ -120,7 +121,12 @@ export default function CuentaCorrientePage() {
   const isLoading = isLoadingSocio || isLoadingCuenta;
 
   // Crear un mapa de periodos para acceso rápido filtrado por año seleccionado
-  const cuotasPorMes: Record<string, { estado: string; monto: number; id: number }> = {};
+  const cuotasPorMes: Record<string, {
+    estado: string;
+    monto: number;
+    id: number;
+    tarjetaCentroEstado: "PENDIENTE_RESPUESTA" | "APROBADA" | "RECHAZADA" | "NO_APLICA";
+  }> = {};
   if (cuentaCorriente?.cuotas) {
     cuentaCorriente.cuotas.forEach((cuota) => {
       if (cuota.periodo.startsWith(String(selectedYear))) {
@@ -129,6 +135,7 @@ export default function CuentaCorrientePage() {
           estado: cuota.estado,
           monto: Number(cuota.monto),
           id: cuota.id,
+          tarjetaCentroEstado: cuota.tarjetaCentroEstado,
         };
       }
     });
@@ -203,6 +210,22 @@ export default function CuentaCorrientePage() {
   const renderEstadoMes = (mesKey: string) => {
     const cuota = cuotasPorMes[mesKey];
 
+    if (cuota?.tarjetaCentroEstado === "PENDIENTE_RESPUESTA") {
+      return (
+        <span className="inline-flex items-center justify-center rounded-md bg-blue-100 px-2 py-1 text-[10px] font-semibold text-blue-700">
+          Tarj. pend.
+        </span>
+      );
+    }
+
+    if (cuota?.tarjetaCentroEstado === "RECHAZADA") {
+      return (
+        <span className="inline-flex items-center justify-center rounded-md bg-red-100 px-2 py-1 text-[10px] font-semibold text-red-700">
+          Tarj. rech.
+        </span>
+      );
+    }
+
     if (cuota?.estado === "PAGADA") {
       return (
         <span className="text-green-600 font-bold text-lg">✓</span>
@@ -225,6 +248,47 @@ export default function CuentaCorrientePage() {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
+  };
+
+  const renderTarjetaEstado = (cuota: {
+    tarjetaCentroEstado: "PENDIENTE_RESPUESTA" | "APROBADA" | "RECHAZADA" | "NO_APLICA";
+    tarjetaCentroDetalle: string;
+    tarjetaCentroFechaEstado?: string;
+  }) => {
+    if (cuota.tarjetaCentroEstado === "NO_APLICA") {
+      return <span className="text-xs text-muted-foreground">No aplica</span>;
+    }
+
+    if (cuota.tarjetaCentroEstado === "PENDIENTE_RESPUESTA") {
+      return (
+        <div className="space-y-1">
+          <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+            Tarjeta pendiente
+          </Badge>
+          <p className="text-xs text-muted-foreground">{cuota.tarjetaCentroDetalle}</p>
+        </div>
+      );
+    }
+
+    if (cuota.tarjetaCentroEstado === "RECHAZADA") {
+      return (
+        <div className="space-y-1">
+          <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+            Tarjeta rechazada
+          </Badge>
+          <p className="text-xs text-muted-foreground">{cuota.tarjetaCentroDetalle}</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-1">
+        <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+          Tarjeta aprobada
+        </Badge>
+        <p className="text-xs text-muted-foreground">{cuota.tarjetaCentroDetalle}</p>
+      </div>
+    );
   };
 
   const handlePagarCuota = (cuotaId: number) => {
@@ -462,7 +526,8 @@ export default function CuentaCorrientePage() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
+                {/* Tabla de estado de pagos - Desktop */}
+                <div className="hidden overflow-x-auto md:block">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -487,6 +552,21 @@ export default function CuentaCorrientePage() {
                       </TableRow>
                     </TableBody>
                   </Table>
+                </div>
+
+                {/* Cards de estado de pagos - Mobile */}
+                <div className="md:hidden space-y-3">
+                  <div className="p-4 rounded-lg border bg-muted/30">
+                    <p className="font-medium mb-3">{socio?.apellido}, {socio?.nombre}</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {meses.map((mes) => (
+                        <div key={mes.key} className="text-center p-2 rounded bg-background">
+                          <p className="text-xs text-muted-foreground mb-1">{mes.label}</p>
+                          <div className="text-lg">{renderEstadoMes(mes.key)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Sección de pago rápido de cuotas pendientes */}
@@ -754,114 +834,206 @@ export default function CuentaCorrientePage() {
                       </DialogContent>
                     </Dialog>
 
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[60px] text-center">
-                              <input
-                                type="checkbox"
-                                checked={todasPendientesSeleccionadas}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    seleccionarTodasPendientes();
+                    {/* Tabla de cuotas pendientes */}
+                    <ResponsiveTable
+                      data={cuotasPendientes}
+                      keyExtractor={(cuota) => String(cuota.id)}
+                      columns={[
+                        {
+                          key: "seleccion",
+                          header: (
+                            <input
+                              type="checkbox"
+                              checked={todasPendientesSeleccionadas}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  seleccionarTodasPendientes();
+                                  return;
+                                }
+                                limpiarSeleccionCuotas();
+                              }}
+                              aria-label="Seleccionar todas"
+                            />
+                          ),
+                          headerClassName: "w-[60px] text-center",
+                          cellClassName: "text-center",
+                          cell: (cuota) => (
+                            <input
+                              type="checkbox"
+                              checked={cuotasSeleccionadas.includes(cuota.id)}
+                              onChange={(e) =>
+                                toggleCuotaSeleccionada(cuota.id, e.target.checked)
+                              }
+                              aria-label={`Seleccionar cuota ${cuota.periodo}`}
+                            />
+                          ),
+                        },
+                        {
+                          key: "periodo",
+                          header: "Período",
+                          cell: (cuota) => (
+                            <span className={cuotasSeleccionadas.includes(cuota.id) ? "font-medium" : ""}>
+                              {cuota.periodo}
+                            </span>
+                          ),
+                        },
+                        {
+                          key: "monto",
+                          header: "Monto",
+                          headerClassName: "text-right",
+                          cellClassName: "text-right",
+                          cell: (cuota) => formatCurrency(Number(cuota.monto)),
+                        },
+                        {
+                          key: "estadoTarjeta",
+                          header: "Tarjeta del Centro",
+                          cell: (cuota) => renderTarjetaEstado(cuota),
+                        },
+                        {
+                          key: "acciones",
+                          header: "Acciones",
+                          headerClassName: "text-center",
+                          cellClassName: "text-center",
+                          cell: (cuota) => (
+                            <div className="flex flex-col items-center justify-center gap-2 sm:flex-row">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="border-blue-600 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+                                onClick={() => {
+                                  if (!idValido) {
                                     return;
                                   }
-                                  limpiarSeleccionCuotas();
+                                  void abrirReciboHtml(cuota.periodo, socioId);
                                 }}
-                                aria-label="Seleccionar todas"
-                              />
-                            </TableHead>
-                            <TableHead>Período</TableHead>
-                            <TableHead className="text-right">Monto</TableHead>
-                            <TableHead className="text-center">Acciones</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {cuotasPendientes.map((cuota) => (
-                            <TableRow
-                              key={cuota.id}
-                              className={cuotasSeleccionadas.includes(cuota.id) ? "bg-emerald-50/70" : undefined}
-                            >
-                              <TableCell className="text-center">
-                                <input
-                                  type="checkbox"
-                                  checked={cuotasSeleccionadas.includes(cuota.id)}
-                                  onChange={(e) =>
-                                    toggleCuotaSeleccionada(cuota.id, e.target.checked)
-                                  }
-                                  aria-label={`Seleccionar cuota ${cuota.periodo}`}
-                                />
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                {cuota.periodo}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {formatCurrency(Number(cuota.monto))}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                <div className="flex flex-col items-center justify-center gap-2 sm:flex-row">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="border-blue-600 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
-                                    onClick={() => {
-                                      if (!idValido) {
-                                        return;
-                                      }
+                                title="Imprimir recibo"
+                              >
+                                <Download className="h-4 w-4 mr-1" />
+                                Imprimir recibo
+                              </Button>
 
-                                      void abrirReciboHtml(cuota.periodo, socioId);
-                                    }}
-                                    title="Imprimir recibo"
-                                  >
-                                    <Download className="h-4 w-4 mr-1" />
-                                    Imprimir recibo
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                                    <CreditCard className="h-4 w-4 mr-1" />
+                                    Pagar
                                   </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Confirmar pago</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      ¿Desea registrar el pago de la cuota <strong>{cuota.periodo}</strong> por <strong>{formatCurrency(Number(cuota.monto))}</strong>?
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => handlePagarCuota(cuota.id)}
+                                      className="bg-green-600 hover:bg-green-700"
+                                    >
+                                      {isPagando ? (
+                                        <>
+                                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                          Procesando...
+                                        </>
+                                      ) : (
+                                        "Confirmar pago"
+                                      )}
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          ),
+                        },
+                      ]}
+                      renderCard={(cuota) => (
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <input
+                                type="checkbox"
+                                checked={cuotasSeleccionadas.includes(cuota.id)}
+                                onChange={(e) =>
+                                  toggleCuotaSeleccionada(cuota.id, e.target.checked)
+                                }
+                                aria-label={`Seleccionar cuota ${cuota.periodo}`}
+                                className="mt-1"
+                              />
+                              <div>
+                                <p className="font-semibold">{cuota.periodo}</p>
+                                <p className="text-lg font-bold text-primary">
+                                  {formatCurrency(Number(cuota.monto))}
+                                </p>
+                                <div className="mt-2">{renderTarjetaEstado(cuota)}</div>
+                              </div>
+                            </div>
+                            {cuotasSeleccionadas.includes(cuota.id) && (
+                              <Badge className="bg-emerald-100 text-emerald-700">
+                                Seleccionada
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2 pt-2 border-t">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="border-blue-600 text-blue-700 hover:bg-blue-50 hover:text-blue-800 w-full"
+                              onClick={() => {
+                                if (!idValido) {
+                                  return;
+                                }
+                                void abrirReciboHtml(cuota.periodo, socioId);
+                              }}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              Imprimir recibo
+                            </Button>
 
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                                        <CreditCard className="h-4 w-4 mr-1" />
-                                        Pagar
-                                      </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Confirmar pago</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          ¿Desea registrar el pago de la cuota <strong>{cuota.periodo}</strong> por <strong>{formatCurrency(Number(cuota.monto))}</strong>?
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                        <AlertDialogAction
-                                          onClick={() => handlePagarCuota(cuota.id)}
-                                          className="bg-green-600 hover:bg-green-700"
-                                        >
-                                          {isPagando ? (
-                                            <>
-                                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                              Procesando...
-                                            </>
-                                          ) : (
-                                            "Confirmar pago"
-                                          )}
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button size="sm" className="bg-green-600 hover:bg-green-700 w-full">
+                                  <CreditCard className="h-4 w-4 mr-1" />
+                                  Pagar
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Confirmar pago</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    ¿Desea registrar el pago de la cuota <strong>{cuota.periodo}</strong> por <strong>{formatCurrency(Number(cuota.monto))}</strong>?
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handlePagarCuota(cuota.id)}
+                                    className="bg-green-600 hover:bg-green-700"
+                                  >
+                                    {isPagando ? (
+                                      <>
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        Procesando...
+                                      </>
+                                    ) : (
+                                      "Confirmar pago"
+                                    )}
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      )}
+                      tableWrapperClassName={cuotasSeleccionadas.length > 0 ? "[&_tr:has(input:checked)]:bg-emerald-50/70" : undefined}
+                    />
                   </div>
                 )}
 
-{/* Historial de cuotas detallado */}
+                {/* Historial de cuotas detallado */}
                 {cuentaCorriente?.cuotas && cuentaCorriente.cuotas.length > 0 && (() => {
                   const cuotasOrdenadas = [...cuentaCorriente.cuotas].sort((a, b) => b.periodo.localeCompare(a.periodo));
                   const totalCuotas = cuotasOrdenadas.length;
@@ -878,69 +1050,106 @@ export default function CuentaCorrientePage() {
                           {totalCuotas} cuotas en total
                         </span>
                       </div>
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Período</TableHead>
-                              <TableHead className="text-right">Monto</TableHead>
-                              <TableHead className="text-center">Estado</TableHead>
-                              <TableHead>Fecha de pago</TableHead>
-                              <TableHead className="text-center">Acciones</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {cuotasPagina.map((cuota) => (
-                              <TableRow key={cuota.id}>
-                                <TableCell className="font-medium">
-                                  {cuota.periodo}
-                                </TableCell>
-                                <TableCell className="text-right">
+                      <ResponsiveTable
+                        data={cuotasPagina}
+                        keyExtractor={(cuota) => String(cuota.id)}
+                        columns={[
+                          {
+                            key: "periodo",
+                            header: "Período",
+                            cell: (cuota) => (
+                              <span className="font-medium">{cuota.periodo}</span>
+                            ),
+                          },
+                          {
+                            key: "monto",
+                            header: "Monto",
+                            headerClassName: "text-right",
+                            cellClassName: "text-right",
+                            cell: (cuota) => formatCurrency(Number(cuota.monto)),
+                          },
+                          {
+                            key: "estado",
+                            header: "Estado",
+                            headerClassName: "text-center",
+                            cellClassName: "text-center",
+                            cell: (cuota) => renderTarjetaEstado(cuota),
+                          },
+                          {
+                            key: "fechaPago",
+                            header: "Fecha de pago",
+                            cell: (cuota) =>
+                              cuota.fechaPago
+                                ? new Date(cuota.fechaPago).toLocaleDateString("es-AR")
+                                : "-",
+                          },
+                          {
+                            key: "acciones",
+                            header: "Acciones",
+                            headerClassName: "text-center",
+                            cellClassName: "text-center",
+                            cell: (cuota) => (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className={cuota.estado === "PAGADA"
+                                  ? "border-green-600 text-green-700 hover:bg-green-50 hover:text-green-800"
+                                  : "border-blue-600 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+                                }
+                                onClick={() => {
+                                  if (!idValido) {
+                                    return;
+                                  }
+                                  void abrirReciboHtml(cuota.periodo, socioId);
+                                }}
+                                title="Descargar recibo"
+                              >
+                                <Download className="h-4 w-4 mr-1" />
+                                Recibo
+                              </Button>
+                            ),
+                          },
+                        ]}
+                        renderCard={(cuota) => (
+                          <div className="space-y-3">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <p className="font-semibold">{cuota.periodo}</p>
+                                <p className="text-lg font-bold text-primary">
                                   {formatCurrency(Number(cuota.monto))}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  {cuota.estado === "PAGADA" ? (
-                                    <Badge className="bg-green-100 text-green-700">
-                                      Pagada
-                                    </Badge>
-                                  ) : (
-                                    <Badge className="bg-amber-100 text-amber-800">
-                                      Pendiente
-                                    </Badge>
-                                  )}
-                                </TableCell>
-                                <TableCell>
-                                  {cuota.fechaPago
-                                    ? new Date(cuota.fechaPago).toLocaleDateString("es-AR")
-                                    : "-"}
-                                </TableCell>
-                                <TableCell className="text-center">
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className={cuota.estado === "PAGADA" 
-                                      ? "border-green-600 text-green-700 hover:bg-green-50 hover:text-green-800"
-                                      : "border-blue-600 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
-                                    }
-                                    onClick={() => {
-                                      if (!idValido) {
-                                        return;
-                                      }
-
-                                      void abrirReciboHtml(cuota.periodo, socioId);
-                                    }}
-                                    title="Descargar recibo"
-                                  >
-                                    <Download className="h-4 w-4 mr-1" />
-                                    Recibo
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
+                                </p>
+                              </div>
+                              {renderTarjetaEstado(cuota)}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {cuota.fechaPago
+                                ? `Pagada: ${new Date(cuota.fechaPago).toLocaleDateString("es-AR")}`
+                                : "Sin fecha de pago"}
+                            </div>
+                            <div className="pt-2 border-t">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className={cuota.estado === "PAGADA"
+                                  ? "border-green-600 text-green-700 hover:bg-green-50 hover:text-green-800 w-full"
+                                  : "border-blue-600 text-blue-700 hover:bg-blue-50 hover:text-blue-800 w-full"
+                                }
+                                onClick={() => {
+                                  if (!idValido) {
+                                    return;
+                                  }
+                                  void abrirReciboHtml(cuota.periodo, socioId);
+                                }}
+                              >
+                                <Download className="h-4 w-4 mr-1" />
+                                Descargar recibo
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      />
                       {totalPages > 1 && (
                         <div className="flex items-center justify-between mt-4">
                           <span className="text-sm text-muted-foreground">

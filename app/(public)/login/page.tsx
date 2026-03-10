@@ -14,7 +14,9 @@ export default function LoginPage() {
                 src="https://www.clublavictoria.com.ar/assets/logo-DGcyiAEh.webp"
                 width={72}
                 height={48}
+                sizes="72px"
                 className="mb-4"
+                priority
               />
               <h1 className="page-title text-balance">Panel de Administracion</h1>
               <p className="page-description mt-2 text-balance">

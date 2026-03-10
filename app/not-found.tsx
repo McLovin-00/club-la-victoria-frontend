@@ -16,7 +16,9 @@ export default function NotFound() {
             alt="Club La Victoria Logo"
             width={120}
             height={80}
+            sizes="120px"
             className="object-contain"
+            priority
           />
         </div>
 

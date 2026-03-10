@@ -13,14 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 import {
   BarChart3,
   TrendingUp,
@@ -59,13 +52,10 @@ export default function ReportesPage() {
   const [mes, setMes] = useState("");
   const [anio, setAnio] = useState("");
 
-  // Período formateado para el backend
   const periodo = mes && anio ? `${anio}-${mes}` : "";
 
-  // Estado para rango de meses
   const [rango, setRango] = useState({ desde: "", hasta: "" });
 
-  // Hooks
   const {
     data: reporte,
     isLoading: isLoadingMes,
@@ -136,7 +126,6 @@ export default function ReportesPage() {
           </p>
         </div>
 
-        {/* Tabs para seleccionar tipo de reporte */}
         <Tabs defaultValue="mes" className="w-full">
           <TabsList className="mb-4">
             <TabsTrigger value="mes" className="gap-2">
@@ -149,7 +138,6 @@ export default function ReportesPage() {
             </TabsTrigger>
           </TabsList>
 
-          {/* Tab: Mes Específico */}
           <TabsContent value="mes">
             <Card>
               <CardHeader>
@@ -203,7 +191,6 @@ export default function ReportesPage() {
               </CardContent>
             </Card>
 
-            {/* Resultado mes específico */}
             {isLoadingMes && (
               <Card>
                 <CardContent className="py-8">
@@ -298,7 +285,6 @@ export default function ReportesPage() {
             )}
           </TabsContent>
 
-          {/* Tab: Rango de Meses */}
           <TabsContent value="rango">
             <Card>
               <CardHeader>
@@ -320,7 +306,6 @@ export default function ReportesPage() {
               </CardContent>
             </Card>
 
-            {/* Resultado rango */}
             {isLoadingRango && (
               <Card>
                 <CardContent className="py-8 flex items-center justify-center">
@@ -332,7 +317,6 @@ export default function ReportesPage() {
 
             {reporteRango && (
               <>
-                {/* Resumen Consolidado */}
                 <Card>
                   <CardHeader>
                     <CardTitle>
@@ -402,7 +386,6 @@ export default function ReportesPage() {
                   </CardContent>
                 </Card>
 
-                {/* Tabla desglosada por mes */}
                 <Card>
                   <CardHeader>
                     <CardTitle>Desglose por Mes</CardTitle>
@@ -411,52 +394,105 @@ export default function ReportesPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="min-w-[140px]">Período</TableHead>
-                            <TableHead className="text-right">Total Generado</TableHead>
-                            <TableHead className="text-right">Total Cobrado</TableHead>
-                            <TableHead className="text-right">% Cobranza</TableHead>
-                            <TableHead className="text-center">Cuotas Pagadas</TableHead>
-                            <TableHead className="text-center">Cuotas Pendientes</TableHead>
-                            <TableHead className="text-right">% Morosidad</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {reporteRango.meses.map((mes) => (
-                            <TableRow key={mes.periodo}>
-                              <TableCell className="font-medium">
-                                {getNombreMes(mes.periodo)}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {formatMonto(mes.totalGenerado)}
-                              </TableCell>
-                              <TableCell className="text-right text-green-600">
-                                {formatMonto(mes.totalCobrado)}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <span className={`font-medium ${mes.porcentajeCobranza >= 70 ? "text-green-600" : mes.porcentajeCobranza >= 50 ? "text-amber-600" : "text-red-600"}`}>
-                                  {mes.porcentajeCobranza.toFixed(1)}%
-                                </span>
-                              </TableCell>
-                              <TableCell className="text-center text-green-600">
-                                {mes.cuotasPagadas}
-                              </TableCell>
-                              <TableCell className="text-center text-orange-600">
-                                {mes.cuotasPendientes}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <span className={`font-medium ${mes.morosidad <= 20 ? "text-green-600" : mes.morosidad <= 40 ? "text-amber-600" : "text-red-600"}`}>
-                                  {mes.morosidad.toFixed(1)}%
-                                </span>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
+                    <ResponsiveTable
+                      data={reporteRango.meses}
+                      keyExtractor={(mes) => mes.periodo}
+                      columns={[
+                        {
+                          key: "periodo",
+                          header: "Período",
+                          cell: (mes) => (
+                            <span className="font-medium">{getNombreMes(mes.periodo)}</span>
+                          ),
+                        },
+                        {
+                          key: "totalGenerado",
+                          header: "Total Generado",
+                          headerClassName: "text-right",
+                          cellClassName: "text-right",
+                          cell: (mes) => formatMonto(mes.totalGenerado),
+                        },
+                        {
+                          key: "totalCobrado",
+                          header: "Total Cobrado",
+                          headerClassName: "text-right",
+                          cellClassName: "text-right text-green-600",
+                          cell: (mes) => formatMonto(mes.totalCobrado),
+                        },
+                        {
+                          key: "porcentajeCobranza",
+                          header: "% Cobranza",
+                          headerClassName: "text-right",
+                          cellClassName: "text-right",
+                          cell: (mes) => (
+                            <span className={`font-medium ${mes.porcentajeCobranza >= 70 ? "text-green-600" : mes.porcentajeCobranza >= 50 ? "text-amber-600" : "text-red-600"}`}>
+                              {mes.porcentajeCobranza.toFixed(1)}%
+                            </span>
+                          ),
+                        },
+                        {
+                          key: "cuotasPagadas",
+                          header: "Cuotas Pagadas",
+                          headerClassName: "text-center",
+                          cellClassName: "text-center text-green-600",
+                          cell: (mes) => mes.cuotasPagadas,
+                        },
+                        {
+                          key: "cuotasPendientes",
+                          header: "Cuotas Pendientes",
+                          headerClassName: "text-center",
+                          cellClassName: "text-center text-orange-600",
+                          cell: (mes) => mes.cuotasPendientes,
+                        },
+                        {
+                          key: "morosidad",
+                          header: "% Morosidad",
+                          headerClassName: "text-right",
+                          cellClassName: "text-right",
+                          cell: (mes) => (
+                            <span className={`font-medium ${mes.morosidad <= 20 ? "text-green-600" : mes.morosidad <= 40 ? "text-amber-600" : "text-red-600"}`}>
+                              {mes.morosidad.toFixed(1)}%
+                            </span>
+                          ),
+                        },
+                      ]}
+                      renderCard={(mes) => (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <p className="font-semibold">{getNombreMes(mes.periodo)}</p>
+                            <span className={`font-bold ${mes.porcentajeCobranza >= 70 ? "text-green-600" : mes.porcentajeCobranza >= 50 ? "text-amber-600" : "text-red-600"}`}>
+                              {mes.porcentajeCobranza.toFixed(1)}% cobranza
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div className="p-2 rounded bg-blue-50 border border-blue-200">
+                              <p className="text-xs text-blue-600">Generado</p>
+                              <p className="font-bold text-blue-700">{formatMonto(mes.totalGenerado)}</p>
+                            </div>
+                            <div className="p-2 rounded bg-green-50 border border-green-200">
+                              <p className="text-xs text-green-600">Cobrado</p>
+                              <p className="font-bold text-green-700">{formatMonto(mes.totalCobrado)}</p>
+                            </div>
+                            <div className="p-2 rounded border">
+                              <p className="text-xs text-muted-foreground">Pagadas</p>
+                              <p className="font-bold text-green-600">{mes.cuotasPagadas}</p>
+                            </div>
+                            <div className="p-2 rounded border">
+                              <p className="text-xs text-muted-foreground">Pendientes</p>
+                              <p className="font-bold text-orange-600">{mes.cuotasPendientes}</p>
+                            </div>
+                          </div>
+                          <div className="pt-2 border-t">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">Morosidad:</span>
+                              <span className={`font-bold ${mes.morosidad <= 20 ? "text-green-600" : mes.morosidad <= 40 ? "text-amber-600" : "text-red-600"}`}>
+                                {mes.morosidad.toFixed(1)}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    />
                   </CardContent>
                 </Card>
               </>

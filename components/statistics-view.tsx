@@ -184,7 +184,7 @@ export function StatisticsView() {
       {/* Header con selector de fecha */}
       <div className="flex justify-between items-center">
         <div className="flex w-full justify-between sm:flex-row flex-col gap-2">
-          <h1 className="text-3xl font-bold">Estadísticas de Ingresos</h1>
+          <h1 className="text-2xl font-semibold">Estadísticas de Ingresos</h1>
           <div className="flex items-center gap-2">
             <Popover>
               <PopoverTrigger asChild>
@@ -226,9 +226,9 @@ export function StatisticsView() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="space-y-2">
-                    <div className="h-4 bg-muted animate-pulse rounded w-32" />
-                    <div className="h-8 bg-muted animate-pulse rounded w-16" />
-                    <div className="h-3 bg-muted animate-pulse rounded w-24" />
+                    <div className="h-4 bg-muted rounded w-32" />
+                    <div className="h-8 bg-muted rounded w-16" />
+                    <div className="h-3 bg-muted rounded w-24" />
                   </div>
                 </div>
               </CardContent>

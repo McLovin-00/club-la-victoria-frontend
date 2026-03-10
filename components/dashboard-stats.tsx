@@ -7,16 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AlertTriangle, DollarSign, Users, FileWarning } from "lucide-react"
 import { useReporteCobranza } from "@/hooks/api/cobros/useReporteCobranza"
 import { useSocios } from "@/hooks/api/socios/useSocios"
-
-// Formato de moneda argentina para valores monetarios
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value)
-}
+import { formatCurrency } from "@/lib/cuenta-corriente-utils"
 
 export function DashboardStats() {
   // Período actual para el reporte de cobranza (formato YYYY-MM)
@@ -88,7 +79,7 @@ export function DashboardStats() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {Array.from({ length: 4 }).map((_, index) => (
           <Card key={index} className="animate-pulse border-border/80 shadow-[var(--shadow-soft)]">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
               <div className="h-4 w-24 bg-muted rounded" />
               <div className="h-4 w-4 bg-muted rounded" />
             </CardHeader>
@@ -125,7 +116,7 @@ export function DashboardStats() {
           key={stat.title}
           className={`shadow-sm transition-colors ${
             stat.highlight
-              ? "border-destructive/50 bg-destructive/5 shadow-[var(--shadow-soft)]"
+              ? "border-destructive/30 bg-destructive/2 shadow-[var(--shadow-soft)]"
               : "border-border/80 shadow-[var(--shadow-soft)]"
           }`}
         >
@@ -141,7 +132,7 @@ export function DashboardStats() {
           </CardHeader>
           <CardContent>
             <div
-              className={`text-2xl font-bold ${
+              className={`text-xl font-medium ${
                 stat.highlight ? "text-destructive" : "text-foreground"
               }`}
             >

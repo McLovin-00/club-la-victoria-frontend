@@ -1,7 +1,7 @@
 "use client";
 import { MovementList } from "@/components/cuenta-corriente/movement-list";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -50,10 +50,18 @@ export default function CuentaCorrienteCobradoresPage() {
   // Movement type filter state (instant filter)
   const [tipoMovimiento, setTipoMovimiento] = useState<TipoMovimiento | "TODOS">("TODOS");
 
+  // Socio search filter state (instant filter)
+  const [busquedaSocio, setBusquedaSocio] = useState("");
   const { data: cobradores } = useCobradoresActivos();
   const { data, isLoading } = useCuentaCorrienteCobrador(cobradorId);
   const pagoMutation = useRegistrarPagoCobrador(cobradorId);
   const ajusteMutation = useRegistrarAjusteCobrador(cobradorId);
+
+  useEffect(() => {
+    if (cobradores && cobradores.length > 0 && cobradorId === 0) {
+      setCobradorId(cobradores[0].id);
+    }
+  }, [cobradores, cobradorId]);
 
   // Filter movements by date range
   const dateFilteredMovimientos = useMemo(() => {
@@ -62,10 +70,23 @@ export default function CuentaCorrienteCobradoresPage() {
   }, [data?.movimientos, startDate, endDate]);
 
   // Apply movement type filter (instant)
-  const filteredMovimientos = useMemo(() => {
+  const tipoFilteredMovimientos = useMemo(() => {
     if (tipoMovimiento === "TODOS") return dateFilteredMovimientos;
     return dateFilteredMovimientos.filter((mov) => mov.tipoMovimiento === tipoMovimiento);
   }, [dateFilteredMovimientos, tipoMovimiento]);
+
+  // Apply socio search filter (instant)
+  const filteredMovimientos = useMemo(() => {
+    if (!busquedaSocio.trim()) return tipoFilteredMovimientos;
+    const termino = busquedaSocio.toLowerCase().trim();
+    return tipoFilteredMovimientos.filter((mov) => {
+      const socio = mov.detalleCobro?.socio;
+      if (!socio) return false;
+      const nombreCompleto = `${socio.nombre} ${socio.apellido}`.toLowerCase();
+      const apellidoNombre = `${socio.apellido} ${socio.nombre}`.toLowerCase();
+      return nombreCompleto.includes(termino) || apellidoNombre.includes(termino);
+    });
+  }, [tipoFilteredMovimientos, busquedaSocio]);
 
   // Calculate period summary from filtered movements
   const periodSummary = useMemo(() => {
@@ -77,10 +98,11 @@ export default function CuentaCorrienteCobradoresPage() {
     const defaultRange = getDefaultDateRange();
     return (
       tipoMovimiento !== "TODOS" ||
+      busquedaSocio.trim() !== "" ||
       startDate.toDateString() !== defaultRange.startDate.toDateString() ||
       endDate.toDateString() !== defaultRange.endDate.toDateString()
     );
-  }, [tipoMovimiento, startDate, endDate]);
+  }, [tipoMovimiento, busquedaSocio, startDate, endDate]);
   const handleDateRangeChange = (start: Date, end: Date) => {
     setStartDate(start);
     setEndDate(end);
@@ -95,6 +117,7 @@ export default function CuentaCorrienteCobradoresPage() {
     setStartDate(startDate);
     setEndDate(endDate);
     setTipoMovimiento("TODOS");
+    setBusquedaSocio("");
   };
 
   const payload = {
@@ -156,8 +179,10 @@ export default function CuentaCorrienteCobradoresPage() {
               startDate={startDate}
               endDate={endDate}
               tipoMovimiento={tipoMovimiento}
+              busquedaSocio={busquedaSocio}
               onDateRangeChange={handleDateRangeChange}
               onTipoMovimientoChange={handleTipoMovimientoChange}
+              onBusquedaSocioChange={setBusquedaSocio}
               onClearFilters={handleClearFilters}
             />
 

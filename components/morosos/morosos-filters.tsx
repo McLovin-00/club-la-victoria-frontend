@@ -44,9 +44,8 @@ export function MorososFilters({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="todos">Todos los morosos</SelectItem>
-          <SelectItem value="3-meses">3 meses (Advertencia)</SelectItem>
-          <SelectItem value="4-meses">4+ meses (Critico)</SelectItem>
-          <SelectItem value="6-meses">6+ meses (Severo)</SelectItem>
+          <SelectItem value="3-meses">3 meses</SelectItem>
+          <SelectItem value="4-meses">4+ meses</SelectItem>
         </SelectContent>
       </Select>
     </div>

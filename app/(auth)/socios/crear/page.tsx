@@ -26,11 +26,8 @@ export default function CreateMemberPage() {
     useCreateSocio();
 
   const handleCreateSocio = async (formData: Omit<Socio, "id">) => {
-    console.log('[DEBUG handleCreateSocio] formData:', JSON.stringify(formData, null, 2));
-    console.log('[DEBUG handleCreateSocio] formData.overrideManual:', formData.overrideManual, 'tipo:', typeof formData.overrideManual);
     const formDataToSend = new FormData();
 
-    // Add all form fields except 'foto'
     Object.entries(formData).forEach(([key, value]) => {
       if (
         value !== null &&
@@ -38,14 +35,10 @@ export default function CreateMemberPage() {
         key !== "foto" &&
         typeof value !== "object"
       ) {
-        console.log(`[DEBUG FormData] Agregando ${key}: ${value} (tipo: ${typeof value})`);
         formDataToSend.append(key, String(value));
       }
     });
 
-    console.log('[DEBUG FormData] overrideManual en FormData:', formDataToSend.get('overrideManual'));
-
-    // Add the photo if it exists
     if (photoPreview) {
       const photoFile = dataURLtoFile(
         photoPreview,
@@ -54,11 +47,10 @@ export default function CreateMemberPage() {
       formDataToSend.append("foto", photoFile);
     }
     try {
-      await createSocio(formDataToSend); // <-- aquí sí se puede await
-      router.push(ROUTES.MEMBERS.LIST); // redirige después de éxito
-    } catch (error) {
+      await createSocio(formDataToSend);
+      router.push(ROUTES.MEMBERS.LIST);
+    } catch {
       // El error ya fue mostrado en el hook de API
-      logError(error, "CreateMemberPage");
     }
   };
 
@@ -146,6 +138,7 @@ export default function CreateMemberPage() {
                       alt="Vista previa"
                       width={128}
                       height={128}
+                      sizes="128px"
                       className="w-32 h-32 rounded-full object-cover mx-auto outline-2"
                       unoptimized
                     />

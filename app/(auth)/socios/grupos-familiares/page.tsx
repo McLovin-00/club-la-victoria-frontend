@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useCallback } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +34,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -211,6 +212,42 @@ export default function GruposFamiliaresPage() {
     setIsDeleteOpen(true);
   };
 
+  const handleOpenViewSocios = useCallback((grupoId: number) => {
+    const g = grupos?.find((gr) => gr.id === grupoId) ?? null;
+    if (g) {
+      setSelectedGrupo(g);
+      setIsViewSociosOpen(true);
+    }
+  }, [grupos]);
+
+  const handleOpenCuentas = useCallback((grupoId: number) => {
+    const g = grupos?.find((gr) => gr.id === grupoId) ?? null;
+    if (g) {
+      setSelectedGrupoForCuentas(g);
+      setIsCuentasOpen(true);
+    }
+  }, [grupos]);
+
+  const handleOpenAssign = useCallback((grupoId: number) => {
+    const g = grupos?.find((gr) => gr.id === grupoId) ?? null;
+    if (g) {
+      setSelectedGrupo(g);
+      setSelectedSocioIds([]);
+      setSearchSocio("");
+      setIsAssignOpen(true);
+    }
+  }, [grupos]);
+
+  const handleOpenEdit = useCallback((grupoId: number) => {
+    const g = grupos?.find((gr) => gr.id === grupoId) ?? null;
+    if (g) openEditDialog(g);
+  }, [grupos]);
+
+  const handleOpenDelete = useCallback((grupoId: number) => {
+    const g = grupos?.find((gr) => gr.id === grupoId) ?? null;
+    if (g) openDeleteDialog(g);
+  }, [grupos]);
+
   const openAssignDialog = (grupo: GrupoFamiliarConCantidad) => {
     setSelectedGrupo(grupo);
     setSelectedSocioIds([]);
@@ -294,113 +331,204 @@ export default function GruposFamiliaresPage() {
           </CardHeader>
           <CardContent>
             {grupos && grupos.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-16">Orden</TableHead>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead className="text-center">Socios</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {grupos.map((grupo) => (
-                    <TableRow key={grupo.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <GripVertical className="h-4 w-4 text-muted-foreground" />
-                          <Badge variant="outline">{grupo.orden}</Badge>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{grupo.nombre}</TableCell>
-                      <TableCell className="text-muted-foreground">
+              <ResponsiveTable
+                data={grupos}
+                keyExtractor={(grupo) => String(grupo.id)}
+                columns={[
+                  {
+                    key: "orden",
+                    header: "Orden",
+                    headerClassName: "w-16",
+                    cell: (grupo) => (
+                      <div className="flex items-center gap-2">
+                        <GripVertical className="h-4 w-4 text-muted-foreground" />
+                        <Badge variant="outline">{grupo.orden}</Badge>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: "nombre",
+                    header: "Nombre",
+                    cell: (grupo) => (
+                      <span className="font-medium">{grupo.nombre}</span>
+                    ),
+                  },
+                  {
+                    key: "descripcion",
+                    header: "Descripción",
+                    cell: (grupo) => (
+                      <span className="text-muted-foreground">
                         {grupo.descripcion || "-"}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge 
-                          variant="secondary"
-                          className="cursor-pointer hover:bg-secondary/80"
-                          onClick={() => openViewSociosDialog(grupo)}
-                        >
-                          <Users className="h-3 w-3 mr-1" />
-                          {grupo.cantidadSocios}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openViewSociosDialog(grupo)}
-                                aria-label="Ver socios"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent sideOffset={8}>Ver socios</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openCuentasDialog(grupo)}
-                                aria-label="Ver resumen de cuentas"
-                              >
-                                <Wallet className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent sideOffset={8}>Ver resumen de cuentas</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openAssignDialog(grupo)}
-                                aria-label="Asignar socios"
-                              >
-                                <UserPlus className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent sideOffset={8}>Asignar socios</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openEditDialog(grupo)}
-                                aria-label="Editar grupo"
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent sideOffset={8}>Editar grupo</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openDeleteDialog(grupo)}
-                                aria-label="Eliminar grupo"
-                                className="text-destructive hover:text-destructive"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent sideOffset={8}>Eliminar grupo</TooltipContent>
-                          </Tooltip>
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "socios",
+                    header: "Socios",
+                    headerClassName: "text-center",
+                    cellClassName: "text-center",
+                    cell: (grupo) => (
+                      <Badge
+                        variant="secondary"
+                        className="cursor-pointer hover:bg-secondary/80"
+                        onClick={() => openViewSociosDialog(grupo)}
+                      >
+                        <Users className="h-3 w-3 mr-1" />
+                        {grupo.cantidadSocios}
+                      </Badge>
+                    ),
+                  },
+                  {
+                    key: "acciones",
+                    header: "Acciones",
+                    headerClassName: "text-right",
+                    cellClassName: "text-right",
+                    cell: (grupo) => (
+                      <div className="flex justify-end gap-2">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenViewSocios(grupo.id)}
+                              aria-label="Ver socios"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent sideOffset={8}>Ver socios</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenCuentas(grupo.id)}
+                              aria-label="Ver resumen de cuentas"
+                            >
+                              <Wallet className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent sideOffset={8}>Ver resumen de cuentas</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenAssign(grupo.id)}
+                              aria-label="Asignar socios"
+                            >
+                              <UserPlus className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent sideOffset={8}>Asignar socios</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenEdit(grupo.id)}
+                              aria-label="Editar grupo"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent sideOffset={8}>Editar grupo</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenDelete(grupo.id)}
+                              aria-label="Eliminar grupo"
+                              className="text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent sideOffset={8}>Eliminar grupo</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    ),
+                  },
+                ]}
+                renderCard={(grupo) => (
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <GripVertical className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="font-semibold">{grupo.nombre}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {grupo.descripcion || "Sin descripción"}
+                          </p>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </div>
+                      <Badge variant="outline">Orden: {grupo.orden}</Badge>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <Badge
+                        variant="secondary"
+                        className="cursor-pointer hover:bg-secondary/80"
+                        onClick={() => openViewSociosDialog(grupo)}
+                      >
+                        <Users className="h-3 w-3 mr-1" />
+                        {grupo.cantidadSocios} socios
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => handleOpenViewSocios(grupo.id)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => handleOpenCuentas(grupo.id)}
+                      >
+                        <Wallet className="h-4 w-4 mr-1" />
+                        Cuentas
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => handleOpenAssign(grupo.id)}
+                      >
+                        <UserPlus className="h-4 w-4 mr-1" />
+                        Asignar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => handleOpenEdit(grupo.id)}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full col-span-2 text-destructive border-destructive hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={() => handleOpenDelete(grupo.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Eliminar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              />
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <Users className="h-12 w-12 text-muted-foreground/50 mb-4" />

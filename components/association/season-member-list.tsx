@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -42,7 +43,7 @@ interface SeasonMemberListProps {
   onMembersPerPageChange: (value: string) => void;
 }
 
-export function SeasonMemberList({
+export const SeasonMemberList = React.memo(function SeasonMemberList({
   members,
   searchTerm,
   onSearchChange,
@@ -109,6 +110,7 @@ export function SeasonMemberList({
                       alt={`${socio.socio.nombre} ${socio.socio.apellido}`}
                       width={48}
                       height={48}
+                      sizes="48px"
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -226,4 +228,4 @@ export function SeasonMemberList({
       )}
     </div>
   );
-}
+});

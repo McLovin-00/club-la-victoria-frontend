@@ -35,8 +35,8 @@ import { formatDateLong } from "@/lib/utils/date";
 
 export function SeasonManagement() {
   const { data: temporadas, isLoading } = useTemporadas();
-  const { mutateAsync: createTemporada } = useCreateTemporada();
-  const { mutateAsync: updateTemporada } = useUpdateTemporada();
+  const { mutateAsync: createTemporada, isPending: isPendingCreate } = useCreateTemporada();
+  const { mutateAsync: updateTemporada, isPending: isPendingUpdate } = useUpdateTemporada();
   const { mutateAsync: deleteTemporada, isPending: isPendingDelete } = useDeleteTemporada();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -135,6 +135,7 @@ export function SeasonManagement() {
                 <SeasonForm
                   onSubmit={handleCrearTemporada}
                   onCancel={() => setIsCreateDialogOpen(false)}
+                  isSubmitting={isPendingCreate}
                 />
               </DialogContent>
             </Dialog>
@@ -207,6 +208,7 @@ export function SeasonManagement() {
                             season={editingTemporada}
                             onSubmit={handleEditarTemporada}
                             onCancel={() => setEditingTemporada(null)}
+                            isSubmitting={isPendingUpdate}
                           />
                         )}
                       </DialogContent>

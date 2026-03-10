@@ -30,7 +30,7 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle 401 Unauthorized
+// Response interceptor to handle errors
 apiClient.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error) => {
@@ -43,6 +43,13 @@ apiClient.interceptors.response.use(
         window.location.href = '/login';
       }
     }
+
+    if (error.response?.status === 429) {
+      const retryAfter = error.response.headers['retry-after'];
+      const waitTime = retryAfter ? `${retryAfter} segundos` : 'unos momentos';
+      console.warn(`[Rate Limited] Too many requests. Retry after: ${waitTime}`);
+    }
+
     return Promise.reject(error);
   }
 );

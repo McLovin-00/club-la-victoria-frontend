@@ -1,4 +1,5 @@
 "use client"
+import React from "react";
 
 import { useRef } from "react"
 import { useRouter } from "next/navigation"
@@ -15,7 +16,7 @@ interface MorososTableProps {
 
 const ROW_HEIGHT = 80
 
-export function MorososTable({ morosos }: MorososTableProps) {
+export const MorososTable = React.memo(function MorososTable({ morosos }: MorososTableProps) {
   const router = useRouter()
   const parentRef = useRef<HTMLDivElement>(null)
 
@@ -31,23 +32,16 @@ export function MorososTable({ morosos }: MorososTableProps) {
   }
 
   const getSeveridadBadge = (mesesDeuda: number) => {
-    if (mesesDeuda >= 6) {
-      return (
-        <Badge variant="destructive" className="text-xs">
-          {mesesDeuda} meses - Severo
-        </Badge>
-      )
-    }
     if (mesesDeuda >= 4) {
       return (
-        <Badge variant="default" className="bg-orange-500 text-xs">
-          {mesesDeuda} meses - Critico
+        <Badge variant="destructive" className="text-xs">
+          {mesesDeuda} meses
         </Badge>
       )
     }
     return (
       <Badge variant="secondary" className="bg-yellow-500 text-black text-xs">
-        {mesesDeuda} meses - Advertencia
+        {mesesDeuda} meses
       </Badge>
     )
   }
@@ -82,7 +76,7 @@ export function MorososTable({ morosos }: MorososTableProps) {
       {/* Desktop Table */}
       <div className="hidden md:block rounded-lg border bg-card">
         {/* Header */}
-        <div className="grid grid-cols-[1fr_100px_120px_150px_150px_100px] gap-4 px-4 py-3 border-b bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,80px)_minmax(0,100px)_minmax(0,110px)_minmax(0,120px)_minmax(0,80px)] gap-3 px-4 py-3 border-b bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
           <span>Socio</span>
           <span className="text-center">Estado</span>
           <span className="text-center">Severidad</span>
@@ -113,7 +107,7 @@ export function MorososTable({ morosos }: MorososTableProps) {
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
-                  className="grid grid-cols-[1fr_100px_120px_150px_150px_100px] gap-4 items-center px-4 border-b last:border-b-0 hover:bg-muted/30 transition-colors"
+                  className="grid grid-cols-[minmax(0,2fr)_minmax(0,80px)_minmax(0,100px)_minmax(0,110px)_minmax(0,120px)_minmax(0,80px)] gap-3 items-center px-4 border-b last:border-b-0 hover:bg-muted/30 transition-colors"
                 >
                   {/* Socio */}
                   <div className="min-w-0">
@@ -245,4 +239,4 @@ export function MorososTable({ morosos }: MorososTableProps) {
       </div>
     </div>
   )
-}
+});

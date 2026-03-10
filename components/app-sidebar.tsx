@@ -1,21 +1,26 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import { useState } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { Button } from "@/components/ui/button"
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@/components/ui/collapsible"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+} from "@/components/ui/sidebar"
 import {
   BarChart3,
   Users,
   Calendar,
   UserCheck,
   LogOut,
-  X,
   DollarSign,
   CalendarCheck,
   ChevronDown,
@@ -26,28 +31,26 @@ import {
   FileText,
   LayoutDashboard,
   AlertTriangle,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import Image from "next/image";
-import { authService } from "@/lib/api/auth";
+} from "lucide-react"
+import { cn } from "@/lib/utils"
+import Image from "next/image"
+import { authService } from "@/lib/api/auth"
 
-// Tipos para la navegación agrupada
 interface NavItem {
-  name: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
+  name: string
+  href: string
+  icon: React.ComponentType<{ className?: string }>
 }
 
 interface NavGroup {
-  id: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  items: NavItem[];
+  id: string
+  label: string
+  icon: React.ComponentType<{ className?: string }>
+  items: NavItem[]
 }
 
-type NavigationEntry = NavItem | NavGroup;
+type NavigationEntry = NavItem | NavGroup
 
-// Estructura de navegación con grupos colapsables
 const navigation: NavigationEntry[] = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Gestión de Socios", href: "/socios", icon: Users },
@@ -75,52 +78,46 @@ const navigation: NavigationEntry[] = [
       { name: "Cobradores", href: "/cobradores", icon: Users },
     ],
   },
-];
+]
 
-// Type guard para distinguir grupos de items individuales
 function isNavGroup(entry: NavigationEntry): entry is NavGroup {
-  return "items" in entry;
+  return "items" in entry
 }
 
-interface SidebarProps {
-  onClose?: () => void;
-}
+export function AppSidebar() {
+  const pathname = usePathname()
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(["pileta", "cuotas"])
 
-export function Sidebar({ onClose }: SidebarProps) {
-  const pathname = usePathname();
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(["pileta", "cuotas"]);
-
-  // Verifica si algún hijo del grupo está activo
   const groupHasActiveChild = (group: NavGroup): boolean => {
-    return group.items.some((item) => pathname === item.href);
-  };
+    return group.items.some((item) => pathname === item.href)
+  }
 
   const toggleGroup = (groupId: string, hasActiveChild: boolean) => {
-    // No permite colapsar un grupo que tiene un hijo activo
-    if (hasActiveChild) return;
+    if (hasActiveChild) return
 
     setExpandedGroups((prev) =>
       prev.includes(groupId)
         ? prev.filter((id) => id !== groupId)
         : [...prev, groupId]
-    );
-  };
+    )
+  }
 
   const handleLogout = () => {
-    authService.logout();
-    window.location.href = "/login";
-  };
+    authService.logout()
+    window.location.href = "/login"
+  }
 
   return (
-    <div className="flex flex-col h-full bg-sidebar">
-      {/* Header */}
-      <div className="flex items-center justify-between p-6 border-b border-sidebar-border">
+    <Sidebar>
+      <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
           <Image
             alt="Logo"
             src="https://www.clublavictoria.com.ar/assets/logo-DGcyiAEh.webp"
             width={32}
             height={32}
+            sizes="32px"
+            priority
           />
           <div>
             <h2 className="font-semibold tracking-tight text-sidebar-foreground">
@@ -129,25 +126,13 @@ export function Sidebar({ onClose }: SidebarProps) {
             <p className="text-xs text-muted-foreground">Panel de Control</p>
           </div>
         </div>
-        {onClose && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="lg:hidden text-sidebar-foreground"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
+      </SidebarHeader>
 
-      {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1" role="navigation" aria-label="Navegación principal">
+      <SidebarContent className="p-2" role="navigation" aria-label="Navegación principal">
         {navigation.map((entry) => {
           if (isNavGroup(entry)) {
-            const hasActiveChild = groupHasActiveChild(entry);
-            // El grupo queda abierto si está expandido manualmente O si tiene un hijo activo
-            const isOpen = expandedGroups.includes(entry.id) || hasActiveChild;
+            const hasActiveChild = groupHasActiveChild(entry)
+            const isOpen = expandedGroups.includes(entry.id) || hasActiveChild
 
             return (
               <Collapsible
@@ -178,7 +163,7 @@ export function Sidebar({ onClose }: SidebarProps) {
                 <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
                   <div className="mt-1 space-y-1 pl-4">
                     {entry.items.map((item) => {
-                      const isActive = pathname === item.href;
+                      const isActive = pathname === item.href
                       return (
                         <Link
                           key={item.href}
@@ -190,22 +175,20 @@ export function Sidebar({ onClose }: SidebarProps) {
                               ? "bg-sidebar-accent text-sidebar-accent-foreground"
                               : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
                           )}
-                          onClick={onClose}
                           aria-current={isActive ? "page" : undefined}
                         >
                           <item.icon className="h-4 w-4 shrink-0" />
                           <span className="truncate">{item.name}</span>
                         </Link>
-                      );
+                      )
                     })}
                   </div>
                 </CollapsibleContent>
               </Collapsible>
-            );
+            )
           }
 
-          // Item individual (standalone)
-          const isActive = pathname === entry.href;
+          const isActive = pathname === entry.href
           return (
             <Link
               key={entry.href}
@@ -217,18 +200,16 @@ export function Sidebar({ onClose }: SidebarProps) {
                   ? "bg-sidebar-accent text-sidebar-accent-foreground"
                   : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
               )}
-              onClick={onClose}
               aria-current={isActive ? "page" : undefined}
             >
               <entry.icon className="h-4 w-4 shrink-0" />
               <span className="truncate">{entry.name}</span>
             </Link>
-          );
+          )
         })}
-      </nav>
+      </SidebarContent>
 
-      {/* Footer */}
-      <div className="p-4 border-t border-sidebar-border">
+      <SidebarFooter className="p-4 border-t border-sidebar-border">
         <Button
           variant="ghost"
           onClick={handleLogout}
@@ -237,7 +218,7 @@ export function Sidebar({ onClose }: SidebarProps) {
           <LogOut className="h-4 w-4 mr-3" />
           <span>Cerrar Sesión</span>
         </Button>
-      </div>
-    </div>
-  );
+      </SidebarFooter>
+    </Sidebar>
+  )
 }

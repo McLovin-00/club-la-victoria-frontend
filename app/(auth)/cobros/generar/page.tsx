@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, useCallback } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Button } from "@/components/ui/button";
@@ -187,6 +188,15 @@ export default function GenerarCuotasPage() {
     [sociosFiltradosPestana]
   );
 
+  const parentRef = useRef<HTMLDivElement>(null);
+  const ROW_HEIGHT = 64;
+  const virtualizer = useVirtualizer({
+    count: sociosFiltradosPestana.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10,
+  });
+
   const handleFiltroPestanaChange = (value: string) => {
     if (value === "conTarjeta") {
       setFiltroPestana("conTarjeta");
@@ -238,7 +248,7 @@ export default function GenerarCuotasPage() {
     setFiltroCategoria("todos");
   };
 
-  const toggleSocio = (socioId: number, checked: boolean) => {
+  const toggleSocio = useCallback((socioId: number, checked: boolean) => {
     setSelectedSocioIds((prev) => {
       if (checked) {
         return prev.includes(socioId) ? prev : [...prev, socioId];
@@ -246,9 +256,13 @@ export default function GenerarCuotasPage() {
 
       return prev.filter((id) => id !== socioId);
     });
-  };
+  }, []);
 
-  const handleSeleccionarTodos = (checked: boolean) => {
+  const handleToggleSocio = useCallback((id: number, selected: boolean) => {
+    toggleSocio(id, selected);
+  }, [toggleSocio]);
+
+  const handleSeleccionarTodos = useCallback((checked: boolean) => {
     const idsPestana = sociosDisponiblesPestana.map((socio) => socio.id);
 
     if (!checked) {
@@ -261,7 +275,9 @@ export default function GenerarCuotasPage() {
       idsPestana.forEach((id) => next.add(id));
       return Array.from(next);
     });
-  };
+  }, [sociosDisponiblesPestana]);
+
+  const handleSelectAll = handleSeleccionarTodos;
 
   const handleGenerar = () => {
     if (!periodo || selectedSocioIds.length === 0) {
@@ -605,7 +621,7 @@ export default function GenerarCuotasPage() {
                   <Button
                     variant={todosSeleccionados ? "default" : "outline"}
                     size="sm"
-                    onClick={() => handleSeleccionarTodos(!todosSeleccionados)}
+                    onClick={() => handleSelectAll(!todosSeleccionados)}
                     className="gap-2 h-9 shrink-0"
                   >
                     {todosSeleccionados ? (
@@ -680,27 +696,39 @@ export default function GenerarCuotasPage() {
                   </Button>
                 </div>
               ) : (
-                <ScrollArea className="h-[500px]">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/30 hover:bg-muted/40">
-                          <TableHead className="w-12 sticky top-0 bg-muted/30">
-                            <span className="sr-only">Seleccionar</span>
-                          </TableHead>
-                          <TableHead className="sticky top-0 bg-muted/30 min-w-[200px]">Nombre completo</TableHead>
-                          <TableHead className="sticky top-0 bg-muted/30 min-w-[100px]">DNI</TableHead>
-                          <TableHead className="sticky top-0 bg-muted/30 min-w-[120px]">Categoría</TableHead>
-                          <TableHead className="sticky top-0 bg-muted/30 min-w-[120px] text-right">Monto</TableHead>
-                          <TableHead className="sticky top-0 bg-muted/30 min-w-[100px]">Estado</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sociosFiltradosPestana.map((socio) => (
-                          <TableRow
+                <div className="overflow-hidden">
+                  <div className="hidden md:grid md:grid-cols-[48px_minmax(0,2fr)_minmax(0,90px)_minmax(0,100px)_minmax(0,90px)_minmax(0,90px)] gap-2 px-4 py-3 border-b bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    <span className="sr-only">Seleccionar</span>
+                    <span>Nombre completo</span>
+                    <span>DNI</span>
+                    <span>Categoría</span>
+                    <span className="text-right">Monto</span>
+                    <span>Estado</span>
+                  </div>
+
+                  <div ref={parentRef} className="h-[500px] overflow-auto">
+                    <div
+                      style={{
+                        height: `${virtualizer.getTotalSize()}px`,
+                        width: "100%",
+                        position: "relative",
+                      }}
+                    >
+                      {virtualizer.getVirtualItems().map((virtualRow) => {
+                        const socio = sociosFiltradosPestana[virtualRow.index];
+                        return (
+                          <div
                             key={socio.id}
+                            style={{
+                              position: "absolute",
+                              top: 0,
+                              left: 0,
+                              width: "100%",
+                              height: `${virtualRow.size}px`,
+                              transform: `translateY(${virtualRow.start}px)`,
+                            }}
                             className={cn(
-                              "transition-colors duration-200",
+                              "hidden md:grid md:grid-cols-[48px_minmax(0,2fr)_minmax(0,90px)_minmax(0,100px)_minmax(0,90px)_minmax(0,90px)] gap-2 items-center px-4 border-b transition-colors duration-200",
                               socio.cuotaExistente
                                 ? "bg-muted/30 opacity-60"
                                 : selectedSocioIds.includes(socio.id)
@@ -708,45 +736,44 @@ export default function GenerarCuotasPage() {
                                   : "hover:bg-muted/50"
                             )}
                           >
-                            <TableCell>
-                              <button
-                                type="button"
-                                onClick={() => toggleSocio(socio.id, !selectedSocioIds.includes(socio.id))}
-                                disabled={socio.cuotaExistente}
-                                className={cn(
-                                  "flex h-9 w-9 items-center justify-center rounded-lg border-2 transition-all duration-200",
-                                  socio.cuotaExistente
-                                    ? "border-muted-foreground/20 bg-muted/50 cursor-not-allowed opacity-50"
-                                    : selectedSocioIds.includes(socio.id)
-                                      ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/25 scale-110"
-                                      : "border-muted-foreground/40 hover:border-primary hover:bg-primary/10 hover:scale-105 cursor-pointer"
-                                )}
-                              >
-                                {selectedSocioIds.includes(socio.id) && !socio.cuotaExistente && (
-                                  <CheckCircle className="h-5 w-5" />
-                                )}
-                              </button>
-                            </TableCell>
-                            <TableCell className="font-medium">
-                              <div className="flex items-center gap-3">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-primary text-xs font-bold">
-                                  {socio.nombre.charAt(0)}{socio.apellido.charAt(0)}
-                                </div>
-                                <span>{socio.apellido}, {socio.nombre}</span>
+                            <button
+                              type="button"
+                              onClick={() => toggleSocio(socio.id, !selectedSocioIds.includes(socio.id))}
+                              disabled={socio.cuotaExistente}
+                              className={cn(
+                                "flex h-9 w-9 items-center justify-center rounded-lg border-2 transition-all duration-200",
+                                socio.cuotaExistente
+                                  ? "border-muted-foreground/20 bg-muted/50 cursor-not-allowed opacity-50"
+                                  : selectedSocioIds.includes(socio.id)
+                                    ? "border-primary bg-primary text-primary-foreground shadow-md shadow-primary/25 scale-110"
+                                    : "border-muted-foreground/40 hover:border-primary hover:bg-primary/10 hover:scale-105 cursor-pointer"
+                              )}
+                            >
+                              {selectedSocioIds.includes(socio.id) && !socio.cuotaExistente && (
+                                <CheckCircle className="h-5 w-5" />
+                              )}
+                            </button>
+
+                            <div className="flex items-center gap-3 font-medium min-w-0">
+                              <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/20 to-primary/5 text-primary text-xs font-bold">
+                                {socio.nombre.charAt(0)}{socio.apellido.charAt(0)}
                               </div>
-                            </TableCell>
-                            <TableCell className="text-muted-foreground font-mono text-sm">
+                              <span className="truncate">{socio.apellido}, {socio.nombre}</span>
+                            </div>
+
+                            <span className="text-muted-foreground font-mono text-sm truncate">
                               {socio.dni ?? "-"}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="font-normal">
-                                {socio.categoriaNombre}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right font-medium tabular-nums">
+                            </span>
+
+                            <Badge variant="outline" className="font-normal truncate">
+                              {socio.categoriaNombre}
+                            </Badge>
+
+                            <span className="text-right font-medium tabular-nums">
                               {formatoMoneda(socio.montoMensual)}
-                            </TableCell>
-                            <TableCell>
+                            </span>
+
+                            <div>
                               {socio.cuotaExistente ? (
                                 <Badge
                                   variant="secondary"
@@ -764,13 +791,68 @@ export default function GenerarCuotasPage() {
                                   Disponible
                                 </Badge>
                               )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </ScrollArea>
+
+                  <div className="md:hidden divide-y">
+                    {sociosFiltradosPestana.slice(0, 30).map((socio) => (
+                      <div
+                        key={socio.id}
+                        className={cn(
+                          "flex flex-col gap-3 p-4",
+                          socio.cuotaExistente && "opacity-60"
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-3 min-w-0 flex-1">
+                            <button
+                              type="button"
+                              onClick={() => toggleSocio(socio.id, !selectedSocioIds.includes(socio.id))}
+                              disabled={socio.cuotaExistente}
+                              className={cn(
+                                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 transition-all duration-200",
+                                socio.cuotaExistente
+                                  ? "border-muted-foreground/20 bg-muted/50 cursor-not-allowed"
+                                  : selectedSocioIds.includes(socio.id)
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "border-muted-foreground/40 hover:border-primary hover:bg-primary/10 cursor-pointer"
+                              )}
+                            >
+                              {selectedSocioIds.includes(socio.id) && !socio.cuotaExistente && (
+                                <CheckCircle className="h-4 w-4" />
+                              )}
+                            </button>
+                            <div className="min-w-0">
+                              <p className="font-medium truncate">{socio.apellido}, {socio.nombre}</p>
+                              <p className="text-xs text-muted-foreground">DNI: {socio.dni ?? "-"}</p>
+                            </div>
+                          </div>
+                          {socio.cuotaExistente ? (
+                            <Badge variant="secondary" className="bg-muted text-muted-foreground shrink-0">
+                              Ya generada
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-emerald-500/30 bg-emerald-500/10 text-emerald-600 shrink-0">
+                              Disponible
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center justify-between pl-11">
+                          <Badge variant="outline" className="font-normal">
+                            {socio.categoriaNombre}
+                          </Badge>
+                          <span className="text-sm font-medium tabular-nums">
+                            {formatoMoneda(socio.montoMensual)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
             </CardContent>
           </Card>

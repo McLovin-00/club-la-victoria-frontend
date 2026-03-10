@@ -39,15 +39,15 @@ const formatMes = (mesStr: string) => {
   return date.toLocaleDateString('es-AR', { month: 'short' }).replace('.', '');
 };
 
-const renderEstadoMes = (cuotas: any[] | undefined, mes: string) => {
-  const cuota = cuotas?.find((c: any) => c.periodo === mes);
+const renderEstadoMes = (cuotas: { periodo: string; estado: string }[] | undefined, mes: string) => {
+  const cuota = cuotas?.find((c) => c.periodo === mes);
   if (cuota?.estado === 'PAGADA') {
-    return <span className="text-green-600 font-bold text-lg" aria-label="Pagado">✓</span>;
+    return <span className="text-status-success font-bold text-lg" aria-label="Estado: Pagado">✓</span>;
   }
   if (cuota?.estado === 'PENDIENTE') {
-    return <span className="text-red-600 font-bold text-lg" aria-label="Adeudado">✗</span>;
+    return <span className="text-status-error font-bold text-lg" aria-label="Estado: Adeudado">✗</span>;
   }
-  return <span className="text-muted-foreground">-</span>;
+  return <span className="text-muted-foreground" aria-label="Sin datos">-</span>;
 };
 
 const formatEstadoSocio = (estado?: string) => {
@@ -144,45 +144,45 @@ export function CuentasGrupoDialog({
           ) : (
             <>
               <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                <Card className="min-w-0 border-l-4 border-l-green-500">
+                <Card className="min-w-0 border-l-4 border-l-status-success">
                   <CardContent className="pt-6">
                     <div className="flex min-w-0 items-center gap-4">
-                      <div className="rounded-lg bg-green-100 p-2">
-                        <TrendingUp className="h-6 w-6 text-green-600" />
+                      <div className="rounded-lg bg-status-success-muted p-2">
+                        <TrendingUp className="h-6 w-6 text-status-success" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm text-muted-foreground">Total Pagado</p>
-                        <p className="text-xl font-bold text-green-600 sm:text-2xl">
+                        <p className="text-xl font-bold text-status-success sm:text-2xl">
                           {formatCurrency(cuentas?.totalPagado ?? 0)}
                         </p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="min-w-0 border-l-4 border-l-red-500">
+                <Card className="min-w-0 border-l-4 border-l-status-error">
                   <CardContent className="pt-6">
                     <div className="flex min-w-0 items-center gap-4">
-                      <div className="rounded-lg bg-red-100 p-2">
-                        <TrendingDown className="h-6 w-6 text-red-600" />
+                      <div className="rounded-lg bg-status-error-muted p-2">
+                        <TrendingDown className="h-6 w-6 text-status-error" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm text-muted-foreground">Deuda Total</p>
-                        <p className="text-xl font-bold text-red-600 sm:text-2xl">
+                        <p className="text-xl font-bold text-status-error sm:text-2xl">
                           {formatCurrency(cuentas?.totalDeuda ?? 0)}
                         </p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card className="min-w-0 border-l-4 border-l-amber-500 sm:col-span-2 xl:col-span-1">
+                <Card className="min-w-0 border-l-4 border-l-status-warning sm:col-span-2 xl:col-span-1">
                   <CardContent className="pt-6">
                     <div className="flex min-w-0 items-center gap-4">
-                      <div className="rounded-lg bg-amber-100 p-2">
-                        <Users className="h-6 w-6 text-amber-600" />
+                      <div className="rounded-lg bg-status-warning-muted p-2">
+                        <Users className="h-6 w-6 text-status-warning" />
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm text-muted-foreground">Estado del Grupo</p>
-                        <p className="text-base font-bold leading-tight text-amber-600 sm:text-lg">
+                        <p className="text-base font-bold leading-tight text-status-warning sm:text-lg">
                           {cuentas?.sociosAlDia ?? 0} al día, {cuentas?.sociosEnDeuda ?? 0} en deuda
                         </p>
                       </div>
@@ -214,84 +214,164 @@ export function CuentasGrupoDialog({
                 <p className="mb-3 text-xs text-muted-foreground sm:hidden">
                   Desliza la tabla hacia los lados para ver todos los meses.
                 </p>
-                <ScrollArea className="h-[min(52vh,430px)] w-full rounded-md border">
-                  <Table className="min-w-[1120px]">
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="min-w-[160px] sticky left-0 bg-background z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Nombre</TableHead>
-                        <TableHead className="min-w-[110px]">Estado</TableHead>
-                        <TableHead>Deuda</TableHead>
-                        <TableHead className="min-w-[96px] text-center whitespace-nowrap">Meses Adeudados</TableHead>
-                        {meses.map((mes) => (
-                          <TableHead key={mes} className="text-center min-w-[60px] whitespace-nowrap">
-                            {formatMes(mes)}
-                          </TableHead>
-                        ))}
-                        <TableHead className="text-right sticky right-0 bg-background z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Acciones</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {cuentas.miembros.map((miembro) => {
-                        const hasError = memberErrors?.some((e) => e.socioId === miembro.socioInfo.id);
-                        const isMoroso = miembro.socioInfo.estado?.toLowerCase() === 'moroso';
-                        const stickyBgClass = 'bg-background';
-                        const cuotasPendientes =
-                          miembro.cuenta?.cuotas.filter((c: any) => c.estado === 'PENDIENTE').length || 0;
+                
+                <div className="hidden md:block">
+                  <ScrollArea className="h-[min(52vh,430px)] w-full rounded-md border">
+                    <Table className="min-w-[1120px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="min-w-[160px] sticky left-0 bg-background z-10 shadow-[var(--shadow-sticky-right)]">Nombre</TableHead>
+                          <TableHead className="min-w-[110px]">Estado</TableHead>
+                          <TableHead>Deuda</TableHead>
+                          <TableHead className="min-w-[96px] text-center whitespace-nowrap">Meses Adeudados</TableHead>
+                          {meses.map((mes) => (
+                            <TableHead key={mes} className="text-center min-w-[60px] whitespace-nowrap">
+                              {formatMes(mes)}
+                            </TableHead>
+                          ))}
+                          <TableHead className="text-right sticky right-0 bg-background z-10 shadow-[var(--shadow-sticky-left)]">Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {cuentas.miembros.map((miembro) => {
+                          const hasError = memberErrors?.some((e) => e.socioId === miembro.socioInfo.id);
+                          const isMoroso = miembro.socioInfo.estado?.toLowerCase() === 'moroso';
+                          const stickyBgClass = 'bg-background';
+                          const cuotasPendientes =
+                            miembro.cuenta?.cuotas.filter((c) => c.estado === 'PENDIENTE').length || 0;
 
-                        return (
-                          <TableRow
-                            key={miembro.socioInfo.id}
-                            className={
-                              isMoroso
-                                ? 'group [&>td]:bg-red-500/5 hover:[&>td]:bg-red-500/10'
-                                : 'group hover:bg-transparent hover:[&>td]:bg-muted/50'
-                            }
-                          >
-                            <TableCell className={`font-medium whitespace-nowrap sticky left-0 z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${stickyBgClass}`}>
-                              <div className="flex items-center gap-2">
-                                <span>
-                                  {miembro.socioInfo.nombre} {miembro.socioInfo.apellido}
-                                </span>
-                                {hasError && (
-                                  <Badge variant="destructive" className="text-[10px] h-5 px-1.5 flex items-center gap-1">
-                                    <AlertCircle className="w-3 h-3" />
-                                    Error
-                                  </Badge>
-                                )}
-                                {!miembro.cuenta && !hasError && (
-                                  <Badge variant="outline" className="text-[10px] h-5 px-1.5 text-muted-foreground">
-                                    Sin datos
-                                  </Badge>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>{formatEstadoSocio(miembro.socioInfo.estado)}</TableCell>
-                            <TableCell>{miembro.cuenta ? formatCurrency(miembro.cuenta.totalDeuda) : '-'}</TableCell>
-                            <TableCell className="text-center">{miembro.cuenta ? cuotasPendientes : '-'}</TableCell>
-                            {meses.map((mes) => (
-                              <TableCell key={mes} className="text-center">
-                                {renderEstadoMes(miembro.cuenta?.cuotas, mes)}
+                          return (
+                            <TableRow
+                              key={miembro.socioInfo.id}
+                              className={
+                                isMoroso
+                                  ? 'group [&>td]:bg-status-error-muted/50 hover:[&>td]:bg-status-error-muted/70'
+                                  : 'group hover:bg-transparent hover:[&>td]:bg-muted/50'
+                              }
+                            >
+                              <TableCell className={`font-medium whitespace-nowrap sticky left-0 z-10 shadow-[var(--shadow-sticky-right)] ${stickyBgClass}`}>
+                                <div className="flex items-center gap-2">
+                                  <span>
+                                    {miembro.socioInfo.nombre} {miembro.socioInfo.apellido}
+                                  </span>
+                                  {hasError && (
+                                    <Badge variant="destructive" className="text-[10px] h-5 px-1.5 flex items-center gap-1">
+                                      <AlertCircle className="w-3 h-3" />
+                                      Error
+                                    </Badge>
+                                  )}
+                                  {!miembro.cuenta && !hasError && (
+                                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 text-muted-foreground">
+                                      Sin datos
+                                    </Badge>
+                                  )}
+                                </div>
                               </TableCell>
+                              <TableCell>{formatEstadoSocio(miembro.socioInfo.estado)}</TableCell>
+                              <TableCell>{miembro.cuenta ? formatCurrency(miembro.cuenta.totalDeuda) : '-'}</TableCell>
+                              <TableCell className="text-center">{miembro.cuenta ? cuotasPendientes : '-'}</TableCell>
+                              {meses.map((mes) => (
+                                <TableCell key={mes} className="text-center">
+                                  {renderEstadoMes(miembro.cuenta?.cuotas, mes)}
+                                </TableCell>
+                              ))}
+                              <TableCell className={`text-right sticky right-0 z-10 shadow-[var(--shadow-sticky-left)] ${stickyBgClass}`}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" asChild aria-label="Ver cuenta corriente">
+                                      <Link href={`/socios/${miembro.socioInfo.id}/cuenta-corriente`}>
+                                        <Eye className="h-4 w-4" />
+                                      </Link>
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent sideOffset={8}>Ver cuenta corriente</TooltipContent>
+                                </Tooltip>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </ScrollArea>
+                </div>
+
+                <div className="space-y-3 md:hidden">
+                  {cuentas.miembros.map((miembro) => {
+                    const hasError = memberErrors?.some((e) => e.socioId === miembro.socioInfo.id);
+                    const isMoroso = miembro.socioInfo.estado?.toLowerCase() === 'moroso';
+                    const cuotasPendientes =
+                      miembro.cuenta?.cuotas.filter((c) => c.estado === 'PENDIENTE').length || 0;
+
+                    return (
+                      <div
+                        key={miembro.socioInfo.id}
+                        className={`space-y-3 rounded-lg border p-4 ${isMoroso ? 'bg-status-error-muted/50' : ''}`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-semibold">
+                              {miembro.socioInfo.nombre} {miembro.socioInfo.apellido}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Estado: {formatEstadoSocio(miembro.socioInfo.estado)}
+                            </p>
+                          </div>
+                          <div className="flex gap-1">
+                            {hasError && (
+                              <Badge variant="destructive" className="text-[10px] h-5 px-1.5">
+                                <AlertCircle className="w-3 h-3 mr-1" />
+                                Error
+                              </Badge>
+                            )}
+                            {!miembro.cuenta && !hasError && (
+                              <Badge variant="outline" className="text-[10px] h-5 px-1.5 text-muted-foreground">
+                                Sin datos
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="rounded-lg bg-muted/50 p-2">
+                            <p className="text-xs text-muted-foreground">Deuda</p>
+                            <p className="font-bold text-status-error">
+                              {miembro.cuenta ? formatCurrency(miembro.cuenta.totalDeuda) : '-'}
+                            </p>
+                          </div>
+                          <div className="rounded-lg bg-muted/50 p-2">
+                            <p className="text-xs text-muted-foreground">Meses adeudados</p>
+                            <p className="font-bold">
+                              {miembro.cuenta ? cuotasPendientes : '-'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t">
+                          <p className="text-xs text-muted-foreground mb-2">Estado mensual</p>
+                          <div className="grid grid-cols-4 gap-1">
+                            {meses.map((mes) => (
+                              <div key={mes} className="text-center p-1.5 rounded bg-muted/30">
+                                <p className="text-[10px] text-muted-foreground">{formatMes(mes)}</p>
+                                <div className="text-base">
+                                  {renderEstadoMes(miembro.cuenta?.cuotas, mes)}
+                                </div>
+                              </div>
                             ))}
-                            <TableCell className={`text-right sticky right-0 z-10 shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)] ${stickyBgClass}`}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button variant="ghost" size="icon" asChild aria-label="Ver cuenta corriente">
-                                    <Link href={`/socios/${miembro.socioInfo.id}/cuenta-corriente`}>
-                                      <Eye className="h-4 w-4" />
-                                      <span className="sr-only">Ver cuenta</span>
-                                    </Link>
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent sideOffset={8}>Ver cuenta corriente</TooltipContent>
-                              </Tooltip>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t">
+                          <Button variant="outline" size="sm" className="w-full" asChild>
+                            <Link href={`/socios/${miembro.socioInfo.id}/cuenta-corriente`}>
+                              <Eye className="h-4 w-4 mr-1" />
+                              Ver cuenta corriente
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </>
           )}

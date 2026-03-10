@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,17 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CheckCircle, ChevronLeft, ChevronFirst, ChevronRight, ChevronLast, Search, X, Calendar } from "lucide-react";
-import { useCuotas, EstadoCuota } from "@/hooks/api/cobros/useCuotas";
+import { useCuotas, EstadoCuota, type Cuota } from "@/hooks/api/cobros/useCuotas";
 import { useMetodosPago } from "@/hooks/api/cobros/useMetodosPago";
 import { usePagoMultiple } from "@/hooks/api/cobros/usePagoMultiple";
 import { useProcesarResultadosTarjetaCentro } from "@/hooks/api/cobros/useProcesarResultadosTarjetaCentro";
@@ -33,7 +26,6 @@ import { PAGINACION } from "@/lib/constants";
 type FiltroEstado = "TODOS" | "PENDIENTE" | "PAGADA";
 type FiltroPestana = "sinTarjeta" | "conTarjeta";
 
-// Constantes para el selector de período (igual que en generar cuotas)
 const MESES = [
   { valor: "01", nombre: "Enero" },
   { valor: "02", nombre: "Febrero" },
@@ -77,7 +69,6 @@ export default function PagosPage() {
     }
   }, [metodosPago, metodoPagoId]);
   
-  // Estados para período (separados como en generar cuotas)
   const [mes, setMes] = useState("");
   const [anio, setAnio] = useState("");
   
@@ -92,12 +83,10 @@ export default function PagosPage() {
   const [limitSinPaginacion, setLimitSinPaginacion] = useState<number>(limitPaginado);
   const [seleccionMasivaPendiente, setSeleccionMasivaPendiente] = useState(false);
 
-  // Construir período a partir de mes y año
   const periodoFiltro = mes && anio ? `${anio}-${mes}` : "";
   const pageConsulta = mostrarTodosRegistros ? 1 : page;
   const limitConsulta = mostrarTodosRegistros ? limitSinPaginacion : limitPaginado;
 
-  // Construir filtros para la query
   const filtros = useMemo(() => {
     const filtrosQuery: {
       periodo?: string;
@@ -129,61 +118,60 @@ export default function PagosPage() {
   const pagoMultipleMutation = usePagoMultiple();
   const procesarResultadosTarjetaCentroMutation = useProcesarResultadosTarjetaCentro();
 
-  // Handlers para período (como en generar cuotas)
-  const handleMesChange = (newMes: string) => {
+  const handleMesChange = useCallback((newMes: string) => {
     setMes(newMes);
     setPage(1);
-  };
+  }, []);
 
-  const handleAnioChange = (newAnio: string) => {
+  const handleAnioChange = useCallback((newAnio: string) => {
     setAnio(newAnio);
     setPage(1);
-  };
+  }, []);
 
-  const handlePeriodoActual = () => {
+  const handlePeriodoActual = useCallback(() => {
     const actual = getPeriodoActual();
     setMes(actual.mes);
     setAnio(actual.anio);
     setPage(1);
-  };
+  }, [setMes, setAnio, setPage]);
 
-  const handleLimpiarPeriodo = () => {
+  const handleLimpiarPeriodo = useCallback(() => {
     setMes("");
     setAnio("");
     setPage(1);
-  };
+  }, [setMes, setAnio, setPage]);
 
-  const handleEstadoChange = (value: FiltroEstado) => {
+  const handleEstadoChange = useCallback((value: FiltroEstado) => {
     setEstadoFiltro(value);
     setPage(1);
-  };
+  }, []);
 
-  const handlePestanaChange = (value: string) => {
+  const handlePestanaChange = useCallback((value: string) => {
     const nextValue: FiltroPestana = value === "conTarjeta" ? "conTarjeta" : "sinTarjeta";
     setFiltroPestana(nextValue);
     setPage(1);
-  };
+  }, []);
 
-  const handleBusquedaChange = (value: string) => {
+  const handleBusquedaChange = useCallback((value: string) => {
     setBusqueda(value);
-  };
+  }, []);
 
-  const aplicarBusqueda = () => {
+  const aplicarBusqueda = useCallback(() => {
     setBusquedaAplicada(busqueda);
     setPage(1);
-  };
+  }, [busqueda]);
 
-  const limpiarBusqueda = () => {
+  const limpiarBusqueda = useCallback(() => {
     setBusqueda("");
     setBusquedaAplicada("");
     setPage(1);
-  };
+  }, []);
 
-  const handleBusquedaKeyDown = (e: React.KeyboardEvent) => {
+  const handleBusquedaKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       aplicarBusqueda();
     }
-  };
+  }, []);
 
   const formatMonto = (monto: number) => {
     return new Intl.NumberFormat("es-AR", {
@@ -327,7 +315,6 @@ export default function PagosPage() {
   const totalPages = data?.totalPages || 1;
   const totalItems = data?.total || 0;
 
-  // Texto descriptivo según filtros
   const getDescripcionFiltros = () => {
     const partes: string[] = [];
     
@@ -358,6 +345,197 @@ export default function PagosPage() {
     return partes.join(" - ");
   };
 
+  const baseColumns = [
+    {
+      key: "seleccion",
+      header: "",
+      headerClassName: "w-12",
+      cell: (cuota: Cuota) => (
+        <input
+          type="checkbox"
+          checked={cuotasSeleccionadas.includes(cuota.id)}
+          onChange={() => toggleSeleccion(cuota.id)}
+          disabled={cuota.estado !== EstadoCuota.PENDIENTE}
+          className="h-4 w-4"
+        />
+      ),
+    },
+    {
+      key: "socio",
+      header: "Socio",
+      cell: (cuota: Cuota) =>
+        cuota.socio
+          ? `${cuota.socio.apellido}, ${cuota.socio.nombre}`
+          : `Socio #${cuota.socioId}`,
+    },
+    {
+      key: "dni",
+      header: "DNI",
+      cell: (cuota: Cuota) => cuota.socio?.dni || "-",
+    },
+    {
+      key: "periodo",
+      header: "Período",
+      cell: (cuota: Cuota) => cuota.periodo,
+    },
+    {
+      key: "monto",
+      header: "Monto",
+      cell: (cuota: Cuota) => formatMonto(cuota.monto),
+    },
+    {
+      key: "emision",
+      header: "Emisión cuota",
+      cell: (cuota: Cuota) => formatFechaHora(cuota.createdAt),
+    },
+    {
+      key: "fechaPago",
+      header: "Fecha pago",
+      cell: (cuota: Cuota) => formatFechaHora(cuota.fechaPago),
+    },
+    {
+      key: "estado",
+      header: "Estado",
+      cell: (cuota: Cuota) => (
+        <Badge
+          variant={
+            cuota.estado === EstadoCuota.PAGADA
+              ? "default"
+              : "secondary"
+          }
+          className={
+            cuota.estado === EstadoCuota.PAGADA
+              ? "bg-green-100 text-green-700 hover:bg-green-100"
+              : "bg-amber-100 text-amber-800 hover:bg-amber-100"
+          }
+        >
+          {cuota.estado}
+        </Badge>
+      ),
+    },
+  ];
+
+  const tarjetaColumn = {
+    key: "resultadoTarjeta",
+    header: "Resultado tarjeta",
+    cell: (cuota: Cuota) =>
+      cuota.estado === EstadoCuota.PENDIENTE ? (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            size="sm"
+            className="bg-green-600 hover:bg-green-700"
+            disabled={procesarResultadosTarjetaCentroMutation.isPending}
+            onClick={() => handleProcesarCuotaTarjetaCentro(cuota.id, true)}
+          >
+            <CheckCircle className="mr-1 h-3 w-3" />
+            Aprobada
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
+            disabled={procesarResultadosTarjetaCentroMutation.isPending}
+            onClick={() => handleProcesarCuotaTarjetaCentro(cuota.id, false)}
+          >
+            <X className="mr-1 h-3 w-3" />
+            Rechazada
+          </Button>
+        </div>
+      ) : (
+        <span className="text-sm text-muted-foreground">-</span>
+      ),
+  };
+
+  const columns = filtroPestana === "conTarjeta"
+    ? [...baseColumns, tarjetaColumn]
+    : baseColumns;
+
+  const renderCard = (cuota: Cuota) => (
+    <div className="space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={cuotasSeleccionadas.includes(cuota.id)}
+            onChange={() => toggleSeleccion(cuota.id)}
+            disabled={cuota.estado !== EstadoCuota.PENDIENTE}
+            className="mt-1 h-4 w-4"
+          />
+          <div>
+            <p className="font-semibold">
+              {cuota.socio
+                ? `${cuota.socio.apellido}, ${cuota.socio.nombre}`
+                : `Socio #${cuota.socioId}`}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              DNI: {cuota.socio?.dni || "-"}
+            </p>
+          </div>
+        </div>
+        <Badge
+          variant={
+            cuota.estado === EstadoCuota.PAGADA
+              ? "default"
+              : "secondary"
+          }
+          className={
+            cuota.estado === EstadoCuota.PAGADA
+              ? "bg-green-100 text-green-700 hover:bg-green-100"
+              : "bg-amber-100 text-amber-800 hover:bg-amber-100"
+          }
+        >
+          {cuota.estado}
+        </Badge>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-2 text-sm">
+        <div>
+          <p className="text-muted-foreground">Período</p>
+          <p className="font-medium">{cuota.periodo}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Monto</p>
+          <p className="font-bold text-primary">{formatMonto(cuota.monto)}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Emisión</p>
+          <p>{formatFechaHora(cuota.createdAt)}</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Fecha pago</p>
+          <p>{formatFechaHora(cuota.fechaPago)}</p>
+        </div>
+      </div>
+
+      {filtroPestana === "conTarjeta" && cuota.estado === EstadoCuota.PENDIENTE && (
+        <div className="pt-2 border-t">
+          <p className="text-sm text-muted-foreground mb-2">Resultado tarjeta</p>
+          <div className="flex flex-col gap-2">
+            <Button
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 w-full"
+              disabled={procesarResultadosTarjetaCentroMutation.isPending}
+              onClick={() => handleProcesarCuotaTarjetaCentro(cuota.id, true)}
+            >
+              <CheckCircle className="mr-1 h-3 w-3" />
+              Aprobada
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700 w-full"
+              disabled={procesarResultadosTarjetaCentroMutation.isPending}
+              onClick={() => handleProcesarCuotaTarjetaCentro(cuota.id, false)}
+            >
+              <X className="mr-1 h-3 w-3" />
+              Rechazada
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <DashboardLayout title="Registrar Pagos" description="Registre pagos de cuotas desde el listado">
       <div className="space-y-6">
@@ -378,7 +556,6 @@ export default function PagosPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Filtros */}
             <div className="space-y-4 mb-6 p-4 bg-muted/50 rounded-lg">
               <Tabs value={filtroPestana} onValueChange={handlePestanaChange}>
                 <TabsList>
@@ -387,9 +564,7 @@ export default function PagosPage() {
                 </TabsList>
               </Tabs>
 
-              {/* Fila 1: Buscador */}
               <div className="flex flex-col md:flex-row gap-4">
-                {/* Buscador por nombre/apellido/DNI */}
                 <div className="flex-1">
                   <Label htmlFor="busqueda" className="text-sm">
                     Buscar socio
@@ -427,7 +602,6 @@ export default function PagosPage() {
                   </div>
                 </div>
 
-                {/* Filtro por estado */}
                 <div className="w-full md:w-40">
                   <Label htmlFor="estado-filtro" className="text-sm">
                     Estado
@@ -445,7 +619,6 @@ export default function PagosPage() {
                 </div>
               </div>
 
-              {/* Fila 2: Selector de período (como en generar cuotas) */}
               <div className="flex flex-col sm:flex-row sm:items-end gap-3">
                 <div className="flex items-center gap-2">
                   <div className="space-y-2">
@@ -501,7 +674,6 @@ export default function PagosPage() {
                 </div>
               </div>
 
-              {/* Indicador de período seleccionado */}
               {periodoFiltro && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Badge variant="secondary" className="font-normal">
@@ -591,102 +763,14 @@ export default function PagosPage() {
                   </div>
                 </div>
 
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12"></TableHead>
-                      <TableHead>Socio</TableHead>
-                      <TableHead>DNI</TableHead>
-                      <TableHead>Período</TableHead>
-                      <TableHead>Monto</TableHead>
-                      <TableHead>Emisión cuota</TableHead>
-                      <TableHead>Fecha pago</TableHead>
-                      <TableHead>Estado</TableHead>
-                      {filtroPestana === "conTarjeta" && <TableHead>Resultado tarjeta</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.cuotas.map((cuota) => (
-                      <TableRow
-                        key={cuota.id}
-                        className={
-                          cuotasSeleccionadas.includes(cuota.id)
-                            ? "bg-primary/5"
-                            : ""
-                        }
-                      >
-                        <TableCell>
-                          <input
-                            type="checkbox"
-                            checked={cuotasSeleccionadas.includes(cuota.id)}
-                            onChange={() => toggleSeleccion(cuota.id)}
-                            disabled={cuota.estado !== EstadoCuota.PENDIENTE}
-                            className="h-4 w-4"
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {cuota.socio
-                            ? `${cuota.socio.apellido}, ${cuota.socio.nombre}`
-                            : `Socio #${cuota.socioId}`}
-                        </TableCell>
-                        <TableCell>
-                          {cuota.socio?.dni || "-"}
-                        </TableCell>
-                        <TableCell>{cuota.periodo}</TableCell>
-                        <TableCell>{formatMonto(cuota.monto)}</TableCell>
-                        <TableCell>{formatFechaHora(cuota.createdAt)}</TableCell>
-                        <TableCell>{formatFechaHora(cuota.fechaPago)}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              cuota.estado === EstadoCuota.PAGADA
-                                ? "default"
-                                : "secondary"
-                            }
-                            className={
-                              cuota.estado === EstadoCuota.PAGADA
-                                ? "bg-green-100 text-green-700 hover:bg-green-100"
-                                : "bg-amber-100 text-amber-800 hover:bg-amber-100"
-                            }
-                          >
-                            {cuota.estado}
-                          </Badge>
-                        </TableCell>
-                        {filtroPestana === "conTarjeta" && (
-                          <TableCell>
-                            {cuota.estado === EstadoCuota.PENDIENTE ? (
-                              <div className="flex flex-col gap-2 sm:flex-row">
-                                <Button
-                                  size="sm"
-                                  className="bg-green-600 hover:bg-green-700"
-                                  disabled={procesarResultadosTarjetaCentroMutation.isPending}
-                                  onClick={() => handleProcesarCuotaTarjetaCentro(cuota.id, true)}
-                                >
-                                  <CheckCircle className="mr-1 h-3 w-3" />
-                                  Aprobada
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
-                                  disabled={procesarResultadosTarjetaCentroMutation.isPending}
-                                  onClick={() => handleProcesarCuotaTarjetaCentro(cuota.id, false)}
-                                >
-                                  <X className="mr-1 h-3 w-3" />
-                                  Rechazada
-                                </Button>
-                              </div>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <ResponsiveTable
+                  data={data.cuotas}
+                  keyExtractor={(cuota) => String(cuota.id)}
+                  columns={columns}
+                  renderCard={renderCard}
+                  tableWrapperClassName={cuotasSeleccionadas.length > 0 ? "[&_tr:has(input:checked)]:bg-primary/5" : undefined}
+                />
 
-                {/* Controles de paginación */}
                 {!mostrarTodosRegistros && totalPages > 1 && (
                   <div className="flex items-center justify-between mt-4 pt-4 border-t">
                     <p className="text-sm text-muted-foreground">

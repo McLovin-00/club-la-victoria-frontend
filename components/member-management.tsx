@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 
 import { useState } from "react";
 import Image from "next/image";
@@ -27,6 +28,7 @@ import { useDeleteSocio } from "@/hooks/api/socios/useDeleteSocio";
 import { useSocios } from "@/hooks/api/socios/useSocios";
 import { ESTADO_SOCIO, PAGINACION } from "@/lib/constants";
 import { SocioWithFoto } from "@/lib/types";
+import { getEstadoBadgeVariant, getCategoriaBadgeClasses } from "@/lib/utils/badges";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,20 +58,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 
 type SocioListado = SocioWithFoto & {
   categoria?: { nombre?: string } | string | null;
   categoriaNombre?: string;
   nombreCategoria?: string;
+};
+
+const getNombreCategoria = (socio: SocioListado): string => {
+  if (typeof socio.categoria === "string") return socio.categoria;
+  if (socio.categoria?.nombre) return socio.categoria.nombre;
+  return socio.categoriaNombre || socio.nombreCategoria || "Sin categoría";
 };
 
 const formatDate = (dateString?: string): string => {
@@ -85,38 +86,7 @@ const formatDate = (dateString?: string): string => {
   }
 };
 
-const badgeCategoriaClassName: Record<string, string> = {
-  ACTIVO:
-    "border-emerald-200 bg-emerald-100 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200",
-  ADHERENTE:
-    "border-blue-200 bg-blue-100 text-blue-800 dark:border-blue-800 dark:bg-blue-950/50 dark:text-blue-200",
-  VITALICIO:
-    "border-amber-200 bg-amber-100 text-amber-800 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200",
-  HONORARIO:
-    "border-violet-200 bg-violet-100 text-violet-800 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-200",
-};
-
-const getNombreCategoria = (socio: SocioListado): string => {
-  const categoriaRaw =
-    typeof socio.categoria === "string"
-      ? socio.categoria
-      : socio.categoria?.nombre ?? socio.categoriaNombre ?? socio.nombreCategoria;
-
-  if (!categoriaRaw || categoriaRaw.trim().length === 0) {
-    return "SIN CATEGORIA";
-  }
-
-  return categoriaRaw.trim().toUpperCase();
-};
-
-const getCategoriaBadgeClassName = (categoria: string): string => {
-  return (
-    badgeCategoriaClassName[categoria] ||
-    "border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
-  );
-};
-
-export function MemberManagement() {
+export const MemberManagement = React.memo(function MemberManagement() {
   const [selectedSocio, setSelectedSocio] = useState<SocioListado | null>(null);
   const {
     data: sociosPaginados,
@@ -144,39 +114,12 @@ export function MemberManagement() {
   const startIndex = (currentPage - 1) * sociosPorPagina;
 
   const renderEstadoBadge = (estado: ESTADO_SOCIO) => {
-    const getBadgeStyles = () => {
-      switch (estado) {
-        case ESTADO_SOCIO.ACTIVO:
-          return "bg-primary text-primary-foreground";
-        case ESTADO_SOCIO.MOROSO:
-          return "bg-orange-500 text-white";
-        case ESTADO_SOCIO.INACTIVO:
-        default:
-          return "bg-secondary text-secondary-foreground";
-      }
-    };
-
-    const getEstadoLabel = () => {
-      switch (estado) {
-        case ESTADO_SOCIO.ACTIVO:
-          return "Activo";
-        case ESTADO_SOCIO.MOROSO:
-          return "Moroso";
-        case ESTADO_SOCIO.INACTIVO:
-        default:
-          return "Inactivo";
-      }
-    };
-
     return (
-      <Badge
-        variant={estado === ESTADO_SOCIO.ACTIVO ? "default" : "secondary"}
-        className={`${getBadgeStyles()} flex-shrink-0`}
-      >
-        {getEstadoLabel()}
+      <Badge variant={getEstadoBadgeVariant(estado)}>
+        {estado === ESTADO_SOCIO.ACTIVO ? "Activo" : estado === ESTADO_SOCIO.MOROSO ? "Moroso" : "Inactivo"}
       </Badge>
-    );
-  };
+    )
+  }
 
   const renderCategoriaBadge = (socio: SocioListado) => {
     const nombreCategoria = getNombreCategoria(socio);
@@ -184,12 +127,12 @@ export function MemberManagement() {
     return (
       <Badge
         variant="outline"
-        className={`${getCategoriaBadgeClassName(nombreCategoria)} font-medium`}
+        className={`${getCategoriaBadgeClasses(nombreCategoria)} font-medium`}
       >
         {nombreCategoria}
       </Badge>
     );
-  };
+  }
 
   const renderActionButtons = (socio: SocioListado) => {
     return (
@@ -344,107 +287,111 @@ export function MemberManagement() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {isLoadingSocios ? (
-              <div className="py-12 text-center">
-                <LoadingSpinner size="lg" />
-                <p className="mt-4 text-sm text-muted-foreground">Cargando socios...</p>
-              </div>
-            ) : socios.length === 0 ? (
-              <div className="py-8 text-center">
-                <User className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-                <p className="text-muted-foreground">
-                  {searchTerm ? "No se encontraron socios" : "No hay socios registrados"}
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="hidden overflow-hidden rounded-lg border border-border md:block">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Socio</TableHead>
-                        <TableHead>Categoría</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead className="text-right">Acciones</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {socios.map((socio) => (
-                        <TableRow key={socio.id}>
-                          <TableCell className="py-3">
-                            <div className="flex min-w-0 items-center gap-3">
-                              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-muted">
-                                {socio.fotoUrl ? (
-                                  <Image
-                                    src={socio.fotoUrl}
-                                    alt={socio.nombre}
-                                    width={48}
-                                    height={48}
-                                    className="h-12 w-12 rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <User className="h-5 w-5 text-muted-foreground" />
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="truncate font-semibold text-foreground">
-                                  {`${socio.apellido}, ${socio.nombre}`}
-                                </p>
-                                <p className="text-sm text-muted-foreground">DNI: {socio.dni}</p>
-                                <p className="truncate text-sm text-muted-foreground">{socio.email}</p>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>{renderCategoriaBadge(socio)}</TableCell>
-                          <TableCell>{renderEstadoBadge(socio.estado)}</TableCell>
-                          <TableCell className="text-right">{renderActionButtons(socio)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+            <ResponsiveTable
+              data={socios}
+              keyExtractor={(socio) => socio.id ?? ""}
+              loading={isLoadingSocios}
+              loadingComponent={
+                <div className="py-12 text-center">
+                  <LoadingSpinner size="lg" />
+                  <p className="mt-4 text-sm text-muted-foreground">Cargando socios...</p>
                 </div>
-
-                <div className="space-y-3 md:hidden">
-                  {socios.map((socio) => (
-                    <div
-                      key={socio.id}
-                      className="space-y-3 rounded-lg border border-border p-4 transition-colors hover:bg-muted/50"
-                    >
-                      <div className="flex min-w-0 gap-3">
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-muted">
-                          {socio.fotoUrl ? (
-                            <Image
-                              src={socio.fotoUrl}
-                              alt={socio.nombre}
-                              width={40}
-                              height={40}
-                              className="h-10 w-10 rounded-full object-cover"
-                            />
-                          ) : (
-                            <User className="h-5 w-5 text-muted-foreground" />
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="truncate text-base font-semibold text-foreground">
-                            {`${socio.apellido}, ${socio.nombre}`}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">DNI: {socio.dni}</p>
-                          <p className="truncate text-sm text-muted-foreground">{socio.email}</p>
-                        </div>
+              }
+              emptyIcon={User}
+              emptyMessage={searchTerm ? "No se encontraron socios" : "No hay socios registrados"}
+              columns={[
+                {
+                  key: "socio",
+                  header: "Socio",
+                  cell: (socio) => (
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-muted">
+                        {socio.fotoUrl ? (
+                          <Image
+                            src={socio.fotoUrl}
+                            alt={socio.nombre}
+                            width={48}
+                            height={48}
+                            sizes="48px"
+                            className="h-12 w-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <User className="h-5 w-5 text-muted-foreground" />
+                        )}
                       </div>
-
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/50 pt-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {renderCategoriaBadge(socio)}
-                          {renderEstadoBadge(socio.estado)}
-                        </div>
-                        {renderActionButtons(socio)}
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-foreground">
+                          {`${socio.apellido}, ${socio.nombre}`}
+                        </p>
+                        <p className="text-sm text-muted-foreground">DNI: {socio.dni}</p>
+                        <p className="truncate text-sm text-muted-foreground">{socio.email}</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </>
-            )}
+                  ),
+                  cellClassName: "py-3",
+                },
+                {
+                  key: "categoria",
+                  header: "Categoría",
+                  cell: (socio) => renderCategoriaBadge(socio),
+                },
+                {
+                  key: "estado",
+                  header: "Estado",
+                  cell: (socio) => renderEstadoBadge(socio.estado),
+                },
+                {
+                  key: "tarjeta",
+                  header: "Tarjeta",
+                  cell: (socio) => (
+                    <span className={socio.tarjetaCentro ? "text-green-500" : "text-red-500"}>
+                      {socio.tarjetaCentro ? "✓" : "✗"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "acciones",
+                  header: "Acciones",
+                  cell: (socio) => renderActionButtons(socio),
+                  headerClassName: "text-right",
+                  cellClassName: "text-right",
+                },
+              ]}
+              renderCard={(socio) => (
+                <>
+                  <div className="flex min-w-0 gap-3">
+                    <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-muted">
+                      {socio.fotoUrl ? (
+                        <Image
+                          src={socio.fotoUrl}
+                          alt={socio.nombre}
+                          width={40}
+                          height={40}
+                          sizes="40px"
+                          className="h-10 w-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-base font-semibold text-foreground">
+                        {`${socio.apellido}, ${socio.nombre}`}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">DNI: {socio.dni}</p>
+                      <p className="truncate text-sm text-muted-foreground">{socio.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/50 pt-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {renderCategoriaBadge(socio)}
+                      {renderEstadoBadge(socio.estado)}
+                    </div>
+                    {renderActionButtons(socio)}
+                  </div>
+                </>
+              )}
+            />
           </div>
 
           <div className="mt-6 flex flex-col justify-between gap-3 border-t border-border pt-4 sm:flex-row sm:items-center">
@@ -523,6 +470,7 @@ export function MemberManagement() {
                       alt={selectedSocio.nombre}
                       width={96}
                       height={96}
+                      sizes="96px"
                       className="h-24 w-24 rounded-full object-cover"
                     />
                   ) : (
@@ -639,4 +587,4 @@ export function MemberManagement() {
       </Dialog>
     </>
   );
-}
+});

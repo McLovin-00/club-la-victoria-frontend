@@ -430,6 +430,9 @@ export default function EstadoPagosPage() {
               </div>
             ) : (
               <>
+                <p className="mb-3 text-xs text-muted-foreground sm:hidden">
+                  Desliza la tabla hacia los lados para ver todos los meses.
+                </p>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>

@@ -21,6 +21,15 @@ export interface MovimientoCobrador {
       periodo?: string;
       monto: number;
     }>;
+    conceptos: Array<{
+      concepto?: string;
+      descripcion?: string;
+      monto: number;
+    }>;
+    metodoPago?: {
+      id: number;
+      nombre: string;
+    };
   };
 }
 

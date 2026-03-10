@@ -13,6 +13,13 @@ export interface CuentaCorriente {
     periodo: string;
     monto: number;
     estado: EstadoCuota;
+    tarjetaCentroEstado:
+      | "PENDIENTE_RESPUESTA"
+      | "APROBADA"
+      | "RECHAZADA"
+      | "NO_APLICA";
+    tarjetaCentroDetalle: string;
+    tarjetaCentroFechaEstado?: string;
     fechaPago?: string;
   }[];
   totalDeuda: number;

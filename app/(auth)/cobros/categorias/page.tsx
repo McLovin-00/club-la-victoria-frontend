@@ -7,14 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { ResponsiveTable } from "@/components/ui/responsive-table";
 import {
   Dialog,
   DialogContent,
@@ -75,7 +68,6 @@ export default function CategoriasPage() {
     }).format(monto);
   };
 
-  // Descripción de cada categoría según el estatuto
   const getCategoriaDescripcion = (nombre: string): string => {
     const descripciones: Record<string, string> = {
       ACTIVO: "Socio mayor de edad, paga cuota completa",
@@ -96,7 +88,6 @@ export default function CategoriasPage() {
           </p>
         </div>
 
-        {/* Nota informativa */}
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
@@ -115,53 +106,94 @@ export default function CategoriasPage() {
             {isLoading ? (
               <p className="text-center text-muted-foreground py-8">Cargando categorías...</p>
             ) : categorias && categorias.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Categoría</TableHead>
-                    <TableHead>Descripción</TableHead>
-                    <TableHead>Monto Mensual</TableHead>
-<TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-
-                </TableHeader>
-                <TableBody>
-                  {categorias.map((categoria) => (
-                    <TableRow key={categoria.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          {categoria.nombre}
-                          {categoria.exento && (
-                            <Badge variant="secondary" className="text-xs">
-                              Exento
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {getCategoriaDescripcion(categoria.nombre)}
-                      </TableCell>
-                      <TableCell>
-                        {categoria.exento ? (
-                          <span className="text-muted-foreground">Sin cargo</span>
-                        ) : (
-                          formatMonto(categoria.montoMensual)
+              <ResponsiveTable
+                data={categorias}
+                keyExtractor={(categoria) => String(categoria.id)}
+                columns={[
+                  {
+                    key: "categoria",
+                    header: "Categoría",
+                    cell: (categoria) => (
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{categoria.nombre}</span>
+                        {categoria.exento && (
+                          <Badge variant="secondary" className="text-xs">
+                            Exento
+                          </Badge>
                         )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(categoria)}
-                          title="Editar monto"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </div>
+                    ),
+                  },
+                  {
+                    key: "descripcion",
+                    header: "Descripción",
+                    cell: (categoria) => (
+                      <span className="text-muted-foreground">
+                        {getCategoriaDescripcion(categoria.nombre)}
+                      </span>
+                    ),
+                  },
+                  {
+                    key: "monto",
+                    header: "Monto Mensual",
+                    cell: (categoria) =>
+                      categoria.exento ? (
+                        <span className="text-muted-foreground">Sin cargo</span>
+                      ) : (
+                        formatMonto(categoria.montoMensual)
+                      ),
+                  },
+                  {
+                    key: "acciones",
+                    header: "Acciones",
+                    headerClassName: "text-right",
+                    cellClassName: "text-right",
+                    cell: (categoria) => (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditDialog(categoria)}
+                        title="Editar monto"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    ),
+                  },
+                ]}
+                renderCard={(categoria) => (
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold">{categoria.nombre}</p>
+                        {categoria.exento && (
+                          <Badge variant="secondary" className="text-xs">
+                            Exento
+                          </Badge>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditDialog(categoria)}
+                        title="Editar monto"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {getCategoriaDescripcion(categoria.nombre)}
+                    </p>
+                    <div className="pt-2 border-t">
+                      <p className="text-xs text-muted-foreground">Monto mensual</p>
+                      {categoria.exento ? (
+                        <p className="text-lg font-bold text-muted-foreground">Sin cargo</p>
+                      ) : (
+                        <p className="text-lg font-bold text-primary">{formatMonto(categoria.montoMensual)}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              />
             ) : (
               <p className="text-center text-muted-foreground py-8">
                 No hay categorías registradas. Ejecute el seed para crear las categorías.
@@ -170,7 +202,6 @@ export default function CategoriasPage() {
           </CardContent>
         </Card>
 
-        {/* Diálogo de edición de monto */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
             <form onSubmit={handleSubmit}>

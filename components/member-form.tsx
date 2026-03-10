@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Save, X } from "lucide-react";
+import { Loader2, Save, X } from "lucide-react";
 import { Socio, SocioWithFoto } from "@/lib/types";
 import { ESTADO_SOCIO, GENERO } from "@/lib/constants";
 import { socioSchema, type SocioFormData } from "@/lib/schemas/socio.schema";
@@ -210,17 +210,12 @@ export function MemberForm({
   };
 
   const handleFormSubmit = (data: SocioFormData) => {
-    // Asegurar que overrideManual se incluya explícitamente
-    // ya que no está registrado con register() sino con watch/setValue
     const overrideManual = watch('overrideManual') ?? false;
-    console.log('[DEBUG handleFormSubmit] data.overrideManual:', data.overrideManual, 'tipo:', typeof data.overrideManual);
-    console.log('[DEBUG handleFormSubmit] watch overrideManual:', overrideManual, 'tipo:', typeof overrideManual);
     const finalData = {
       ...data,
       overrideManual,
       categoriaId: overrideManual ? data.categoriaId : undefined,
     };
-    console.log('[DEBUG handleFormSubmit] finalData.overrideManual:', finalData.overrideManual);
     onSubmit(finalData);
   };
 
@@ -231,7 +226,7 @@ export function MemberForm({
         <div className="space-y-2">
           <Label htmlFor="dni">
             DNI{" "}
-            <span className={errors.dni ? "text-red-500" : "text-gray-500"}>
+            <span className={errors.dni ? "text-destructive" : "text-muted-foreground"}>
               *
             </span>
           </Label>
@@ -240,14 +235,12 @@ export function MemberForm({
             {...register("dni")}
             placeholder="12345678"
             maxLength={8}
-            className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors duration-200
-              focus:ring-2 focus:ring-primary/60 focus:border-primary
-              ${errors.dni ? "border-red-500" : "border-gray-300"}
-              hover:border-gray-400`}
+            aria-invalid={!!errors.dni}
+            aria-describedby={errors.dni ? "dni-error" : undefined}
             disabled={isSubmitting}
           />
           {errors.dni && (
-            <p className="text-xs text-red-500 mt-1">{errors.dni.message}</p>
+            <p id="dni-error" className="text-xs text-destructive mt-1">{errors.dni.message}</p>
           )}
         </div>
 
@@ -255,7 +248,7 @@ export function MemberForm({
         <div className="space-y-2">
           <Label htmlFor="nombre">
             Nombre{" "}
-            <span className={errors.nombre ? "text-red-500" : "text-gray-500"}>
+            <span className={errors.nombre ? "text-destructive" : "text-muted-foreground"}>
               *
             </span>
           </Label>
@@ -263,14 +256,13 @@ export function MemberForm({
             id="nombre"
             {...register("nombre")}
             placeholder="Ana"
-            className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors duration-200
-              focus:ring-2 focus:ring-primary/60 focus:border-primary
-              ${errors.nombre ? "border-red-500" : "border-gray-300"}
-              hover:border-gray-400`}
+            maxLength={100}
+            aria-invalid={!!errors.nombre}
+            aria-describedby={errors.nombre ? "nombre-error" : undefined}
             disabled={isSubmitting}
           />
           {errors.nombre && (
-            <p className="text-xs text-red-500 mt-1">{errors.nombre.message}</p>
+            <p id="nombre-error" className="text-xs text-destructive mt-1">{errors.nombre.message}</p>
           )}
         </div>
 
@@ -278,9 +270,7 @@ export function MemberForm({
         <div className="space-y-2">
           <Label htmlFor="apellido">
             Apellido{" "}
-            <span
-              className={errors.apellido ? "text-red-500" : "text-gray-500"}
-            >
+            <span className={errors.apellido ? "text-destructive" : "text-muted-foreground"}>
               *
             </span>
           </Label>
@@ -288,14 +278,13 @@ export function MemberForm({
             id="apellido"
             {...register("apellido")}
             placeholder="García López"
-            className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors duration-200
-              focus:ring-2 focus:ring-primary/60 focus:border-primary
-              ${errors.apellido ? "border-red-500" : "border-gray-300"}
-              hover:border-gray-400`}
+            maxLength={100}
+            aria-invalid={!!errors.apellido}
+            aria-describedby={errors.apellido ? "apellido-error" : undefined}
             disabled={isSubmitting}
           />
           {errors.apellido && (
-            <p className="text-xs text-red-500 mt-1">
+            <p id="apellido-error" className="text-xs text-destructive mt-1">
               {errors.apellido.message}
             </p>
           )}
@@ -305,11 +294,7 @@ export function MemberForm({
         <div className="space-y-2">
           <Label htmlFor="fechaNacimiento">
             Fecha de Nacimiento{" "}
-            <span
-              className={
-                errors.fechaNacimiento ? "text-red-500" : "text-gray-500"
-              }
-            >
+            <span className={errors.fechaNacimiento ? "text-destructive" : "text-muted-foreground"}>
               *
             </span>
           </Label>
@@ -317,14 +302,12 @@ export function MemberForm({
             id="fechaNacimiento"
             type="date"
             {...register("fechaNacimiento")}
-            className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors duration-200
-              focus:ring-2 focus:ring-primary/60 focus:border-primary
-              ${errors.fechaNacimiento ? "border-red-500" : "border-gray-300"}
-              hover:border-gray-400`}
+            aria-invalid={!!errors.fechaNacimiento}
+            aria-describedby={errors.fechaNacimiento ? "fechaNacimiento-error" : undefined}
             disabled={isSubmitting}
           />
           {errors.fechaNacimiento && (
-            <p className="text-xs text-red-500 mt-1">
+            <p id="fechaNacimiento-error" className="text-xs text-destructive mt-1">
               {errors.fechaNacimiento.message}
             </p>
           )}
@@ -334,9 +317,7 @@ export function MemberForm({
         <div className="space-y-2">
           <Label htmlFor="direccion">
             Dirección{" "}
-            <span
-              className={errors.direccion ? "text-red-500" : "text-gray-500"}
-            >
+            <span className={errors.direccion ? "text-destructive" : "text-muted-foreground"}>
               *
             </span>
           </Label>
@@ -344,14 +325,13 @@ export function MemberForm({
             id="direccion"
             {...register("direccion")}
             placeholder="Av. Siempre Viva 742"
-            className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors duration-200
-              focus:ring-2 focus:ring-primary/60 focus:border-primary
-              ${errors.direccion ? "border-red-500" : "border-gray-300"}
-              hover:border-gray-400`}
+            maxLength={200}
+            aria-invalid={!!errors.direccion}
+            aria-describedby={errors.direccion ? "direccion-error" : undefined}
             disabled={isSubmitting}
           />
           {errors.direccion && (
-            <p className="text-xs text-red-500 mt-1">
+            <p id="direccion-error" className="text-xs text-destructive mt-1">
               {errors.direccion.message}
             </p>
           )}
@@ -365,14 +345,13 @@ export function MemberForm({
             type="email"
             {...register("email")}
             placeholder="ana.garcia@email.com"
-            className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors duration-200
-              focus:ring-2 focus:ring-primary/60 focus:border-primary
-              ${errors.email ? "border-red-500" : "border-gray-300"}
-              hover:border-gray-400`}
+            maxLength={100}
+            aria-invalid={!!errors.email}
+            aria-describedby={errors.email ? "email-error" : undefined}
             disabled={isSubmitting}
           />
           {errors.email && (
-            <p className="text-xs text-red-500 mt-1">{errors.email.message}</p>
+            <p id="email-error" className="text-xs text-destructive mt-1">{errors.email.message}</p>
           )}
         </div>
 
@@ -383,14 +362,13 @@ export function MemberForm({
             id="telefono"
             {...register("telefono")}
             placeholder="1122334455"
-            className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors duration-200
-              focus:ring-2 focus:ring-primary/60 focus:border-primary
-              ${errors.telefono ? "border-red-500" : "border-gray-300"}
-              hover:border-gray-400`}
+            maxLength={20}
+            aria-invalid={!!errors.telefono}
+            aria-describedby={errors.telefono ? "telefono-error" : undefined}
             disabled={isSubmitting}
           />
           {errors.telefono && (
-            <p className="text-xs text-red-500 mt-1">
+            <p id="telefono-error" className="text-xs text-destructive mt-1">
               {errors.telefono.message}
             </p>
           )}
@@ -399,19 +377,14 @@ export function MemberForm({
         {/* Género */}
         <div className="space-y-2">
           <Label htmlFor="genero">
-            Género <span className="text-gray-500">*</span>
+            Género <span className="text-muted-foreground">*</span>
           </Label>
           <Select
             value={generoValue}
             onValueChange={(value) => setValue("genero", value as GENERO)}
             disabled={isSubmitting}
           >
-            <SelectTrigger
-              className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors duration-200
-                focus:ring-2 focus:ring-primary/60 focus:border-primary
-                ${errors.genero ? "border-red-500" : "border-gray-300"}
-                hover:border-gray-400`}
-            >
+            <SelectTrigger aria-invalid={!!errors.genero}>
               <SelectValue placeholder="Seleccione el género" />
             </SelectTrigger>
             <SelectContent>
@@ -420,14 +393,14 @@ export function MemberForm({
             </SelectContent>
           </Select>
           {errors.genero && (
-            <p className="text-sm text-destructive">{errors.genero.message}</p>
+            <p id="genero-error" className="text-sm text-destructive">{errors.genero.message}</p>
           )}
         </div>
 
         {/* Estado */}
         <div className="space-y-2">
           <Label htmlFor="estado">
-            Estado <span className="text-gray-500">*</span>
+            Estado <span className="text-muted-foreground">*</span>
           </Label>
           <Select
             value={estadoValue}
@@ -436,12 +409,7 @@ export function MemberForm({
             }
             disabled={isSubmitting}
           >
-            <SelectTrigger
-              className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors duration-200
-                focus:ring-2 focus:ring-primary/60 focus:border-primary
-                ${errors.estado ? "border-red-500" : "border-gray-300"}
-                hover:border-gray-400`}
-            >
+            <SelectTrigger>
               <SelectValue placeholder="Seleccione el estado" />
             </SelectTrigger>
             <SelectContent>
@@ -476,7 +444,7 @@ export function MemberForm({
             <div className="space-y-2">
               <Label htmlFor="numeroTarjetaCentro">
                 Número de tarjeta del centro{" "}
-                <span className={errors.numeroTarjetaCentro ? "text-red-500" : "text-gray-500"}>
+                <span className={errors.numeroTarjetaCentro ? "text-destructive" : "text-muted-foreground"}>
                   *
                 </span>
               </Label>
@@ -484,14 +452,13 @@ export function MemberForm({
                 id="numeroTarjetaCentro"
                 {...register("numeroTarjetaCentro")}
                 placeholder="TC-12345"
-                className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors duration-200
-                  focus:ring-2 focus:ring-primary/60 focus:border-primary
-                  ${errors.numeroTarjetaCentro ? "border-red-500" : "border-gray-300"}
-                  hover:border-gray-400`}
+                maxLength={20}
+                aria-invalid={!!errors.numeroTarjetaCentro}
+                aria-describedby={errors.numeroTarjetaCentro ? "numeroTarjetaCentro-error" : undefined}
                 disabled={isSubmitting}
               />
               {errors.numeroTarjetaCentro && (
-                <p className="text-xs text-red-500 mt-1">
+                <p id="numeroTarjetaCentro-error" className="text-xs text-destructive mt-1">
                   {errors.numeroTarjetaCentro.message}
                 </p>
               )}
@@ -529,7 +496,7 @@ export function MemberForm({
             {overrideManualValue ? (
               <div className="space-y-2">
                 <Label htmlFor="categoriaId">
-                  Selección manual <span className="text-gray-500">*</span>
+                  Selección manual <span className="text-muted-foreground">*</span>
                 </Label>
 
                 <Select
@@ -542,12 +509,7 @@ export function MemberForm({
                   }
                   disabled={isSubmitting}
                 >
-                  <SelectTrigger
-                    className={`w-full rounded-lg border px-3 py-2 text-sm transition-colors duration-200
-                    focus:ring-2 focus:ring-primary/60 focus:border-primary
-                    ${errors.categoriaId ? "border-red-500" : "border-gray-300"}
-                    hover:border-gray-400`}
-                  >
+                  <SelectTrigger aria-invalid={!!errors.categoriaId}>
                     <SelectValue placeholder="Seleccioná una categoría" />
                   </SelectTrigger>
                   <SelectContent>
@@ -560,7 +522,7 @@ export function MemberForm({
                 </Select>
 
                 {errors.categoriaId && (
-                  <p className="text-sm text-destructive">{errors.categoriaId.message}</p>
+                  <p id="categoriaId-error" className="text-sm text-destructive">{errors.categoriaId.message}</p>
                 )}
               </div>
             ) : (
@@ -579,17 +541,21 @@ export function MemberForm({
       <div className="flex gap-3 pt-4">
         <Button
           type="submit"
-          className="flex-1 bg-primary hover:bg-primary/85 hover:scale-105 text-white font-medium rounded-lg shadow-sm transition-all duration-200"
+          className="flex-1"
           disabled={isSubmitting}
         >
-          <Save className="h-4 w-4 mr-2 inline" />
+          {isSubmitting ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin inline" />
+          ) : (
+            <Save className="h-4 w-4 mr-2 inline" />
+          )}
           {isSubmitting ? "Guardando..." : socio ? "Actualizar" : "Crear"}
         </Button>
         <Button
           type="button"
           variant="outline"
           onClick={onCancel}
-          className="flex-1 bg-destructive hover:bg-destructive/85 hover:scale-105 text-white font-medium rounded-lg shadow-sm transition-all duration-200"
+          className="flex-1"
           disabled={isSubmitting}
         >
           <X className="h-4 w-4 mr-2" />

@@ -18,9 +18,10 @@ interface SeasonFormProps {
   season?: Temporada;
   onSubmit: (temporada: Omit<Temporada, "id">) => void;
   onCancel: () => void;
+  isSubmitting?: boolean;
 }
 
-export function SeasonForm({ season, onSubmit, onCancel }: SeasonFormProps) {
+export function SeasonForm({ season, onSubmit, onCancel, isSubmitting }: SeasonFormProps) {
   const {
     register,
     handleSubmit,
@@ -64,6 +65,8 @@ export function SeasonForm({ season, onSubmit, onCancel }: SeasonFormProps) {
           id="nombre"
           {...register("nombre")}
           placeholder="Temporada Verano 2024-2025"
+          maxLength={100}
+          disabled={isSubmitting}
           className={`w-full resize-none ${
             errors.nombre ? "border-destructive" : "border-border"
           }`}
@@ -74,7 +77,7 @@ export function SeasonForm({ season, onSubmit, onCancel }: SeasonFormProps) {
       </div>
 
       {/* Fechas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Fecha de Inicio */}
         <div className="space-y-2">
           <Label htmlFor="fechaInicio">Fecha de Inicio *</Label>
@@ -82,6 +85,7 @@ export function SeasonForm({ season, onSubmit, onCancel }: SeasonFormProps) {
             id="fechaInicio"
             type="date"
             {...register("fechaInicio")}
+            disabled={isSubmitting}
             className={`w-full resize-none ${
               errors.fechaInicio ? "border-destructive" : "border-border"
             }`}
@@ -100,6 +104,7 @@ export function SeasonForm({ season, onSubmit, onCancel }: SeasonFormProps) {
             id="fechaFin"
             type="date"
             {...register("fechaFin")}
+            disabled={isSubmitting}
             className={`w-full resize-none ${
               errors.fechaFin ? "border-destructive" : "border-border"
             }`}
@@ -119,6 +124,7 @@ export function SeasonForm({ season, onSubmit, onCancel }: SeasonFormProps) {
           placeholder="Descripción de la temporada, horarios especiales, etc."
           rows={3}
           maxLength={100}
+          disabled={isSubmitting}
           className={`w-full resize-none break-words ${
             errors.descripcion ? "border-destructive" : "border-border"
           }`}
@@ -135,16 +141,18 @@ export function SeasonForm({ season, onSubmit, onCancel }: SeasonFormProps) {
       <div className="flex gap-3 pt-4">
         <Button
           type="submit"
-          className="flex-1 bg-primary hover:bg-primary/85 hover:scale-105 text-white"
+          disabled={isSubmitting}
+          className="flex-1"
         >
           <Save className="h-4 w-4 mr-2" />
-          {season ? "Actualizar" : "Crear"} Temporada
+          {isSubmitting ? "Guardando..." : season ? "Actualizar" : "Crear"} Temporada
         </Button>
         <Button
           type="button"
           variant="outline"
           onClick={onCancel}
-          className="flex-1 bg-destructive hover:bg-destructive/85 hover:scale-105 text-white"
+          disabled={isSubmitting}
+          className="flex-1"
         >
           <X className="h-4 w-4 mr-2" />
           Cancelar

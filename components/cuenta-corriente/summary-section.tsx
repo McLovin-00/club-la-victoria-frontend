@@ -41,7 +41,7 @@ export function SummarySection({
   ];
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+    <div className="grid gap-4 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium">Saldo actual</CardTitle>
@@ -51,7 +51,7 @@ export function SummarySection({
             <Skeleton className="h-9 w-40" />
           ) : (
             <>
-              <p className="text-3xl font-semibold">{formatCurrency(saldoActual)}</p>
+              <p className="text-2xl font-medium">{formatCurrency(saldoActual)}</p>
               <p className="text-xs text-muted-foreground">Balance total del cobrador</p>
             </>
           )}

@@ -89,6 +89,7 @@ export default function MemberDetailPage() {
                       alt={`Foto de ${socio.nombre} ${socio.apellido}`}
                       width={80}
                       height={80}
+                      sizes="80px"
                       className="w-20 h-20 object-cover"
                       unoptimized
                     />

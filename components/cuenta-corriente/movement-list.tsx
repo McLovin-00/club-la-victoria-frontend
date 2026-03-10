@@ -27,8 +27,9 @@ import {
   RefreshCw,
   Calendar,
   FileText,
+  Receipt,
+  Wallet,
 } from "lucide-react";
-
 interface MovementListProps {
   movimientos: MovimientoCobrador[];
   cobradorId: number;
@@ -161,21 +162,66 @@ export function MovementList({
                     )}
 
                     {movimiento.detalleCobro && (
-                      <div className="rounded-md border bg-background/70 px-2 py-1.5 text-xs text-muted-foreground">
+                      <div className="space-y-1.5 rounded-md border bg-background/70 px-3 py-2 text-xs">
+                        {/* Socio */}
                         {movimiento.detalleCobro.socio && (
-                          <p>
-                            Socio: {movimiento.detalleCobro.socio.apellido}, {movimiento.detalleCobro.socio.nombre}
-                          </p>
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <span className="font-medium text-foreground">Socio:</span>
+                            <span>
+                              {movimiento.detalleCobro.socio.apellido}, {movimiento.detalleCobro.socio.nombre}
+                            </span>
+                          </div>
                         )}
+
+                        {/* Método de pago */}
+                        {movimiento.detalleCobro.metodoPago && (
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Wallet className="h-3 w-3" />
+                            <span className="font-medium">Método:</span>
+                            <span>{movimiento.detalleCobro.metodoPago.nombre}</span>
+                          </div>
+                        )}
+
+                        {/* Cuotas */}
                         {movimiento.detalleCobro.cuotas.length > 0 && (
-                          <p>
-                            Cuotas: {movimiento.detalleCobro.cuotas
-                              .map((cuota: { cuotaId?: number; periodo?: string }) => {
-                                const periodo = cuota.periodo ? ` (${cuota.periodo})` : "";
-                                return periodo.replace(/[()]/g, "").trim();
-                              })
-                              .join(", ")}
-                          </p>
+                          <div className="flex items-start gap-2 text-muted-foreground">
+                            <Receipt className="h-3 w-3 mt-0.5" />
+                            <div>
+                              <span className="font-medium">Cuotas:</span>
+                              <span className="ml-1">
+                                {movimiento.detalleCobro.cuotas
+                                  .map((cuota) => cuota.periodo || `#${cuota.cuotaId}`)
+                                  .join(", ")}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Conceptos extras */}
+                        {movimiento.detalleCobro.conceptos.length > 0 && (
+                          <div className="flex items-start gap-2 text-muted-foreground">
+                            <Receipt className="h-3 w-3 mt-0.5" />
+                            <div className="space-y-0.5">
+                              <span className="font-medium">Extras:</span>
+                              <div className="ml-1 space-y-0.5">
+                                {movimiento.detalleCobro.conceptos.map((concepto, idx) => (
+                                  <div key={idx} className="flex items-center gap-1">
+                                    <span className="font-medium text-foreground">
+                                      {concepto.concepto || "Sin concepto"}
+                                    </span>
+                                    {concepto.descripcion && (
+                                      <span className="text-muted-foreground">
+                                        ({concepto.descripcion})
+                                      </span>
+                                    )}
+                                    <span className="text-green-700 font-medium">
+                                      {formatCurrency(concepto.monto)}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
                         )}
                       </div>
                     )}

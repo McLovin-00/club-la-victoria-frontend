@@ -113,17 +113,17 @@ export function MorososList() {
       </CardHeader>
       <CardContent className="p-0">
         {/* Encabezado de la tabla */}
-        <div className="grid grid-cols-[1fr_auto_auto_auto] md:grid-cols-[1fr_120px_120px_120px] gap-4 px-6 py-2 border-b bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        <div className="hidden md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,100px)_minmax(0,110px)_minmax(0,90px)] gap-3 px-6 py-2 border-b bg-muted/30 text-xs font-medium text-muted-foreground uppercase tracking-wider">
           <span>Socio</span>
           <span className="text-center">Meses deuda</span>
           <span className="text-center">Monto deuda</span>
           <span className="text-right">Acción</span>
         </div>
 
-        {/* Lista virtualizada */}
+        {/* Lista virtualizada - Desktop */}
         <div
           ref={parentRef}
-          className="max-h-[400px] overflow-auto"
+          className="hidden md:block max-h-[400px] overflow-auto"
         >
           <div
             style={{
@@ -145,7 +145,7 @@ export function MorososList() {
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
-                  className="grid grid-cols-[1fr_auto_auto_auto] md:grid-cols-[1fr_120px_120px_120px] gap-4 items-center px-6 border-b last:border-b-0 hover:bg-muted/50 transition-colors"
+                  className="hidden md:grid md:grid-cols-[minmax(0,2fr)_minmax(0,100px)_minmax(0,110px)_minmax(0,90px)] gap-3 items-center px-6 border-b last:border-b-0 hover:bg-muted/50 transition-colors"
                 >
                   {/* Nombre completo del socio */}
                   <div className="truncate">
@@ -184,6 +184,40 @@ export function MorososList() {
               )
             })}
           </div>
+        </div>
+        {/* Mobile Cards */}
+        <div className="md:hidden divide-y">
+          {morosos.slice(0, 20).map((moroso) => (
+            <div
+              key={moroso.socioId}
+              className="flex flex-col gap-2 p-4"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-medium text-foreground">
+                    {moroso.apellido}, {moroso.nombre}
+                  </p>
+                </div>
+                <Badge variant={getBadgeVariant(moroso.mesesDeuda)}>
+                  {moroso.mesesDeuda} {moroso.mesesDeuda === 1 ? "mes" : "meses"}
+                </Badge>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">
+                  Deuda: <span className="font-medium text-foreground">${moroso.montoTotal.toLocaleString("es-AR")}</span>
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleVerCuenta(moroso.socioId)}
+                  className="text-xs"
+                >
+                  <ExternalLink className="h-3 w-3 mr-1" />
+                  Ver cuenta
+                </Button>
+              </div>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>

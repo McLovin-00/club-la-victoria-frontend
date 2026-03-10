@@ -127,6 +127,7 @@ export function AddMemberDialog({
                             alt={`${socio.nombre} ${socio.apellido}`}
                             width={48}
                             height={48}
+                            sizes="48px"
                             className="w-full h-full object-cover"
                           />
                         ) : (

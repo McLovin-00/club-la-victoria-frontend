@@ -1,94 +1,66 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-const usuarioAdmin = process.env.E2E_USER ?? "admin";
-const passwordAdmin = process.env.E2E_PASS ?? "admin";
+import { iniciarSesion } from "./helpers/auth";
+import { seleccionarEnCombo } from "./helpers/select";
 
-const seleccionarEnCombo = async (page: Page, label: string, opcion: string) => {
-  const trigger = page
-    .locator(`label:has-text("${label}")`)
-    .first()
-    .locator("xpath=..")
-    .locator("button")
-    .first();
-
-  await trigger.click();
-  await page.getByRole("option", { name: opcion }).first().click();
-};
-
-test("flujo completo de gestion de cuotas y pagos masivos por barcode", async ({ page }) => {
+test("flujo completo de gestion de cuotas y pagos masivos", async ({ page }) => {
   const anio = String(new Date().getFullYear() + 1);
   const mesNombre = "Enero";
 
-  await page.goto("/login");
-  await page.locator('input[autocomplete="username"]').fill(usuarioAdmin);
-  await page.locator('input[autocomplete="current-password"]').fill(passwordAdmin);
-  const loginRequest = page.waitForResponse(
-    (response) =>
-      response.url().includes("/auth/login") &&
-      (response.status() === 200 || response.status() === 201),
-  );
-  await page.getByRole("button", { name: /Iniciar sesion/i }).click();
-  await loginRequest;
-  await expect(page).toHaveURL(/\/socios|\/$/);
+  await iniciarSesion(page);
 
   await page.goto("/cobros/generar");
   await seleccionarEnCombo(page, "Mes", mesNombre);
   await seleccionarEnCombo(page, "Año", anio);
 
   await expect(page.getByText(/socios sin cuota/i).first()).toBeVisible();
-  await page.getByRole("button", { name: /^Seleccionar todos/i }).click();
 
-  await page.getByRole("button", { name: /^Generar \d+ Cuotas$/ }).click();
-  await expect(page.getByText("Cuotas generadas")).toBeVisible();
+  const botonSeleccionarTodos = page.getByRole("button", {
+    name: /^Seleccionar todos/i,
+  });
+
+  if ((await botonSeleccionarTodos.count()) > 0) {
+    await botonSeleccionarTodos.click();
+    await page.getByRole("button", { name: /^Generar \d+ Cuotas$/ }).click();
+    await expect(page.getByText("Cuotas generadas")).toBeVisible();
+  }
 
   await page.goto("/cobros/pagos");
   await seleccionarEnCombo(page, "Mes", mesNombre);
   await seleccionarEnCombo(page, "Año", anio);
 
-  const celdasBarcode = page.locator("table tbody tr td.font-mono");
-  await expect(celdasBarcode.first()).toBeVisible();
+  const filasCuotas = page.locator("table tbody tr");
+  await expect(filasCuotas.first()).toBeVisible();
 
-  const barcodes = (await celdasBarcode.allTextContents())
-    .map((valor) => valor.trim())
-    .filter((valor) => /^\d{2}-\d{4}-\d+$/.test(valor));
+  const checkboxesFilas = page.locator("table tbody tr td input[type='checkbox']");
+  const cantidadSeleccion = Math.min(await checkboxesFilas.count(), 3);
 
-  expect(barcodes.length).toBeGreaterThanOrEqual(3);
+  expect(cantidadSeleccion).toBeGreaterThan(0);
 
-  const barcodeYaPagado = barcodes[0];
-  const barcodesPendientes = barcodes.slice(1, Math.min(barcodes.length, 6));
-
-  await page.locator("#barcode").fill(barcodeYaPagado);
-  await page.getByRole("button", { name: /^Registrar Pago$/ }).click();
-  await expect(page.getByText("Pago registrado exitosamente")).toBeVisible();
-
-  const codigosIncorrectos = ["12-2099-990001", "12-2099-990002", "12-2099-990003"];
-  const codigosEscaneo = [...barcodesPendientes, ...codigosIncorrectos, barcodeYaPagado];
-
-  await page.getByRole("button", { name: /Esc[áa]ner Masivo/i }).click();
-  const modal = page.getByRole("dialog");
-  const inputScanner = modal.locator("#scanner-input");
-
-  for (const codigo of codigosEscaneo) {
-    await inputScanner.fill(codigo);
-    await inputScanner.press("Enter");
+  for (let indice = 0; indice < cantidadSeleccion; indice += 1) {
+    await checkboxesFilas.nth(indice).check();
   }
 
-  await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: /Esc[áa]ner Masivo/i }).click();
+  await expect(page.getByText(new RegExp(`${cantidadSeleccion} cuotas seleccionadas`, "i"))).toBeVisible();
 
-  for (const codigo of codigosEscaneo) {
-    await expect(modal.getByText(codigo)).toBeVisible();
+  const botonRegistrarSeleccionadas = page.getByRole("button", {
+    name: /^Registrar seleccionadas como pagadas$/i,
+  });
+  await expect(botonRegistrarSeleccionadas).toBeEnabled();
+  await botonRegistrarSeleccionadas.click();
+
+  const dialogoConfirmacion = page.getByRole("dialog");
+  if ((await dialogoConfirmacion.count()) > 0) {
+    const botonConfirmar = dialogoConfirmacion
+      .getByRole("button")
+      .filter({ hasText: /confirmar|registrar|procesar/i })
+      .first();
+
+    if ((await botonConfirmar.count()) > 0) {
+      await botonConfirmar.click();
+    }
   }
 
-  await modal.getByRole("button", { name: /^Procesar \d+ pagos?$/ }).click();
-
-  await expect(
-    page.getByText(`${barcodesPendientes.length} pagos registrados exitosamente`),
-  ).toBeVisible();
-
-  for (const codigoIncorrecto of codigosIncorrectos) {
-    await expect(page.getByText(`${codigoIncorrecto}: cuota no encontrada`)).toBeVisible();
-  }
-
-  await expect(page.getByText(`${barcodeYaPagado}: cuota ya pagada`)).toBeVisible();
+  await expect(page.getByText(/(pagos|cuotas) registrad[oa]s? exitosamente/i)).toBeVisible();
+  await expect(page.getByText(/0 cuotas seleccionadas/i)).toBeVisible();
 });

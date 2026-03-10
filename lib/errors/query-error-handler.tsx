@@ -5,11 +5,21 @@
 import { toast } from "sonner";
 import { adaptError, logError, parseApiError } from "./error.adapter";
 import { BackendErrorCode } from "./error.types";
+import type { NetworkMode } from '@tanstack/react-query';
 
-/**
- * Maneja errores globalmente en React Query
- * Se ejecuta automáticamente cuando cualquier query/mutation falla
- */
+export interface QueryClientConfig {
+  defaultOptions: {
+    queries: {
+    retry: (failureCount: number, error: unknown) => boolean;
+    staleTime: number;
+    gcTime: number;
+    refetchOnWindowFocus: boolean;
+    refetchOnReconnect: boolean;
+    networkMode: NetworkMode;
+  };
+  };
+}
+
 export function handleQueryError(error: unknown, queryKey?: unknown): void {
   // Log para debugging (solo en dev)
   logError(error, `Query: ${JSON.stringify(queryKey)}`);
@@ -37,22 +47,22 @@ export function handleQueryError(error: unknown, queryKey?: unknown): void {
  * Configuración de React Query con manejo de errores
  * Usar en el QueryClientProvider
  */
-export const queryClientConfig = {
+export const queryClientConfig: QueryClientConfig = {
   defaultOptions: {
     queries: {
       retry: (failureCount: number, error: unknown) => {
-        // No reintentar en errores de autenticación o validación
         const noRetryStatuses = [400, 401, 403, 404, 422];
         const apiError = parseApiError(error);
         if (noRetryStatuses.includes(apiError.status)) {
           return false;
         }
-        // Máximo 2 reintentos para otros errores
         return failureCount < 2;
       },
-      staleTime: 5 * 60 * 1000, // 5 minutos por defecto
-      gcTime: 10 * 60 * 1000, // 10 minutos
+      staleTime: 5 * 60 * 1000,
+      gcTime: 10 * 60 * 1000,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      networkMode: 'online' as NetworkMode,
     },
   },
 };

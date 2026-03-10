@@ -62,7 +62,7 @@ export default function CobrosPage() {
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           {acciones.map((accion) => (
             <Link key={accion.href} href={accion.href}>
               <Card className="h-full cursor-pointer transition-colors hover:border-primary">

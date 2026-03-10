@@ -24,7 +24,7 @@ export default function EditMemberPage() {
   const [cropSrc, setCropSrc] = useState<string | null>(null);
 
   const { data: socio } = useSocioById(parseInt(id as string));
-  const { mutateAsync: updateSocio } = useUpdateSocio();
+  const { mutateAsync: updateSocio, isPending: isUpdating } = useUpdateSocio();
 
   // Cargar foto inicial de Cloudinary si existe
   useEffect(() => {
@@ -160,6 +160,7 @@ export default function EditMemberPage() {
                       alt="Vista previa"
                       width={128}
                       height={128}
+                      sizes="128px"
                       className="w-32 h-32 rounded-full object-cover mx-auto outline-2"
                       unoptimized
                     />
@@ -207,6 +208,7 @@ export default function EditMemberPage() {
               socio={socio}
               onSubmit={handleUpdateSocio}
               onCancel={() => router.push("/socios")}
+              isSubmitting={isUpdating}
               showCategorySelector
             />
           </CardContent>
