@@ -1,10 +1,9 @@
 "use client";
+
 import { MovementList } from "@/components/cuenta-corriente/movement-list";
 
 import { useState, useMemo, useEffect } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,6 @@ import {
 import { useCobradoresActivos } from "@/hooks/api/cobradores/useCobradoresActivos";
 import {
   useCuentaCorrienteCobrador,
-  useRegistrarAjusteCobrador,
   useRegistrarPagoCobrador,
 } from "@/hooks/api/cobradores/useCobradorCuentaCorriente";
 import { SummarySection } from "@/components/cuenta-corriente/summary-section";
@@ -29,13 +27,19 @@ import {
   calculatePeriodSummary,
   TipoMovimiento,
 } from "@/lib/cuenta-corriente-utils";
-import { UserRound } from "lucide-react";
+import { UserRound, Plus, ChevronDown } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 export default function CuentaCorrienteCobradoresPage() {
   const [cobradorId, setCobradorId] = useState(0);
-  const [monto, setMonto] = useState("0");
-  const [observacion, setObservacion] = useState("");
+  const [monto, setMonto] = useState("");
   const [referencia, setReferencia] = useState("");
+  const [showPagoForm, setShowPagoForm] = useState(false);
 
   // Date range filter state
   const [startDate, setStartDate] = useState<Date>(() => {
@@ -55,7 +59,12 @@ export default function CuentaCorrienteCobradoresPage() {
   const { data: cobradores } = useCobradoresActivos();
   const { data, isLoading } = useCuentaCorrienteCobrador(cobradorId);
   const pagoMutation = useRegistrarPagoCobrador(cobradorId);
-  const ajusteMutation = useRegistrarAjusteCobrador(cobradorId);
+
+
+  const movimientosVisibles = useMemo(() => {
+    if (!data?.movimientos) return [];
+    return data.movimientos.filter((mov) => mov.tipoMovimiento !== "AJUSTE");
+  }, [data?.movimientos]);
 
   useEffect(() => {
     if (cobradores && cobradores.length > 0 && cobradorId === 0) {
@@ -65,9 +74,8 @@ export default function CuentaCorrienteCobradoresPage() {
 
   // Filter movements by date range
   const dateFilteredMovimientos = useMemo(() => {
-    if (!data?.movimientos) return [];
-    return filterMovimientosByDateRange(data.movimientos, startDate, endDate);
-  }, [data?.movimientos, startDate, endDate]);
+    return filterMovimientosByDateRange(movimientosVisibles, startDate, endDate);
+  }, [movimientosVisibles, startDate, endDate]);
 
   // Apply movement type filter (instant)
   const tipoFilteredMovimientos = useMemo(() => {
@@ -103,6 +111,7 @@ export default function CuentaCorrienteCobradoresPage() {
       endDate.toDateString() !== defaultRange.endDate.toDateString()
     );
   }, [tipoMovimiento, busquedaSocio, startDate, endDate]);
+
   const handleDateRangeChange = (start: Date, end: Date) => {
     setStartDate(start);
     setEndDate(end);
@@ -120,11 +129,16 @@ export default function CuentaCorrienteCobradoresPage() {
     setBusquedaSocio("");
   };
 
-  const payload = {
-    monto: Number(monto),
-    observacion,
-    referencia,
-    usuarioRegistra: "operador_web",
+  const handleRegistrarPago = () => {
+    if (!monto || Number(monto) <= 0) return;
+    pagoMutation.mutate({
+      monto: Number(monto),
+      referencia,
+      usuarioRegistra: "operador_web",
+    });
+    setMonto("");
+    setReferencia("");
+    setShowPagoForm(false);
   };
 
   return (
@@ -132,49 +146,90 @@ export default function CuentaCorrienteCobradoresPage() {
       title="Cuenta Corriente de Cobradores"
       description="Movimientos y saldo por cobrador"
     >
-      <div className="space-y-6">
-        <Card className="py-3">
-          <CardContent className="py-0">
-            <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
-              <div className="space-y-2">
-                <Label htmlFor="cobrador-selector">Cobrador</Label>
-                <Select
-                  value={cobradorId ? String(cobradorId) : ""}
-                  onValueChange={(value) => setCobradorId(Number(value))}
-                >
-                  <SelectTrigger id="cobrador-selector">
-                    <SelectValue placeholder="Seleccioná un cobrador" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {cobradores?.map((cobrador) => (
-                      <SelectItem key={cobrador.id} value={String(cobrador.id)}>
-                        {cobrador.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="rounded-md border bg-muted/20 px-3 py-1.5 text-xs text-muted-foreground">
-                {cobradorId > 0
-                  ? "Vista enfocada: resumen, filtros y movimientos."
-                  : "Elegí un cobrador para cargar la cuenta corriente."}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="space-y-5">
+        {/* Encabezado: Selector de cobrador + acción de pago */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-1.5 sm:min-w-[280px]">
+            <Label htmlFor="cobrador-selector" className="text-xs font-medium text-muted-foreground">
+              Cobrador
+            </Label>
+            <Select
+              value={cobradorId ? String(cobradorId) : ""}
+              onValueChange={(value) => setCobradorId(Number(value))}
+            >
+              <SelectTrigger id="cobrador-selector" className="h-9">
+                <SelectValue placeholder="Seleccioná un cobrador" />
+              </SelectTrigger>
+              <SelectContent>
+                {cobradores?.map((cobrador) => (
+                  <SelectItem key={cobrador.id} value={String(cobrador.id)}>
+                    {cobrador.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {cobradorId > 0 && (
+            <Collapsible open={showPagoForm} onOpenChange={setShowPagoForm}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5">
+                  <Plus className="h-3.5 w-3.5" />
+                  Registrar pago
+                  <ChevronDown className={`h-3 w-3 transition-transform ${showPagoForm ? "rotate-180" : ""}`} />
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3">
+                <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:items-end">
+                  <div className="space-y-1 sm:flex-1">
+                    <Label className="text-xs">Importe</Label>
+                    <Input
+                      type="number"
+                      value={monto}
+                      onChange={(e) => setMonto(e.target.value)}
+                      placeholder="0.00"
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1 sm:flex-[2]">
+                    <Label className="text-xs">Detalle</Label>
+                    <Input
+                      value={referencia}
+                      onChange={(e) => setReferencia(e.target.value)}
+                      placeholder="Ej: Pago parcial, Saldo anterior..."
+                      className="h-8"
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    disabled={pagoMutation.isPending || !monto || Number(monto) <= 0}
+                    onClick={handleRegistrarPago}
+                  >
+                    Registrar
+                  </Button>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+        </div>
 
         {cobradorId === 0 ? (
           <Alert>
             <UserRound className="h-4 w-4" />
             <AlertTitle>Seleccioná un cobrador para comenzar</AlertTitle>
             <AlertDescription>
-              Mostramos la información en pasos para que la pantalla sea más clara: primero elegí
-              el cobrador y luego vas a ver filtros, resumen y movimientos.
+              Elegí un cobrador arriba para ver su resumen, filtros y movimientos.
             </AlertDescription>
           </Alert>
         ) : (
-          <div className="space-y-6">
+          <>
+            {/* Resumen compacto */}
+            <SummarySection
+              saldoActual={data?.saldo ?? 0}
+              periodSummary={periodSummary}
+              isLoading={isLoading}
+            />
+
+            {/* Filtros inline */}
             <FiltersSection
               startDate={startDate}
               endDate={endDate}
@@ -186,64 +241,14 @@ export default function CuentaCorrienteCobradoresPage() {
               onClearFilters={handleClearFilters}
             />
 
-            <SummarySection
-              saldoActual={data?.saldo ?? 0}
-              periodSummary={periodSummary}
-              isLoading={isLoading}
-            />
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Registrar movimiento</CardTitle>
-              </CardHeader>
-              <CardContent className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                <div className="space-y-2">
-                  <Label>Monto</Label>
-                  <Input
-                    type="number"
-                    value={monto}
-                    onChange={(e) => setMonto(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Referencia</Label>
-                  <Input
-                    value={referencia}
-                    onChange={(e) => setReferencia(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Observación</Label>
-                  <Input
-                    value={observacion}
-                    onChange={(e) => setObservacion(e.target.value)}
-                  />
-                </div>
-                <div className="flex items-end gap-2">
-                  <Button
-                    variant="outline"
-                    disabled={pagoMutation.isPending}
-                    onClick={() => pagoMutation.mutate(payload)}
-                  >
-                    Registrar pago
-                  </Button>
-                  <Button
-                    disabled={ajusteMutation.isPending}
-                    onClick={() => ajusteMutation.mutate(payload)}
-                  >
-                    Registrar ajuste
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
+            {/* Movimientos */}
             <MovementList
               movimientos={filteredMovimientos}
               cobradorId={cobradorId}
               hasActiveFilters={hasActiveFilters}
               onClearFilters={handleClearFilters}
             />
-          </div>
+          </>
         )}
       </div>
     </DashboardLayout>

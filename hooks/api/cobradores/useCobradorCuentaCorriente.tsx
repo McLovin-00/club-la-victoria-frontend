@@ -20,16 +20,23 @@ export interface MovimientoCobrador {
       cuotaId?: number;
       periodo?: string;
       monto: number;
+      fechaPago?: string;
     }>;
     conceptos: Array<{
       concepto?: string;
       descripcion?: string;
       monto: number;
+      fecha?: string;
     }>;
     metodoPago?: {
       id: number;
       nombre: string;
     };
+    metodosPago?: Array<{
+      id: number;
+      nombre: string;
+      monto: number;
+    }>;
   };
 }
 

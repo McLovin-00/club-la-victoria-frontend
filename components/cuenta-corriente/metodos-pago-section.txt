@@ -1,0 +1,26 @@
+                    ) : null}
+
+                    {/* Metodos de pago */}
+                    {movimiento.detalleCobro?.metodosPago && movimiento.detalleCobro.metodosPago.length > 0 && (
+                      <div className="flex items-start gap-2">
+                        <CreditCard className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <span className="font-medium">Metodos de pago:</span>
+                          <div className="mt-1 space-y-0.5">
+                            {movimiento.detalleCobro.metodosPago.map((mp, idx) => (
+                              <div
+                                key={idx}
+                                className="flex justify-between gap-2 text-muted-foreground"
+                              >
+                                <span>{mp.nombre}</span>
+                                <span className="shrink-0 font-medium text-foreground">
+                                  {formatCurrency(mp.monto)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {movimiento.observacion && (

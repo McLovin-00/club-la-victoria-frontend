@@ -29,7 +29,7 @@ export function EmptyState({ hasActiveFilters, onClearFilters }: EmptyStateProps
         <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
           {hasActiveFilters
             ? "No se encontraron movimientos con los filtros aplicados. Intenta ampliar el rango de fechas o limpiar los filtros."
-            : "Este cobrador no tiene movimientos en el período seleccionado. Los movimientos aparecerán aquí una vez que se registren pagos, comisiones o ajustes."}
+            : "Este cobrador no tiene movimientos en el período seleccionado. Los movimientos aparecerán aquí una vez que se registren pagos o comisiones."}
         </p>
 
         {hasActiveFilters && onClearFilters && (

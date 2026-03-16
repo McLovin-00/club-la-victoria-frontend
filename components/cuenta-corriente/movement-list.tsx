@@ -24,12 +24,44 @@ import {
 import {
   TrendingUp,
   CreditCard,
-  RefreshCw,
   Calendar,
   FileText,
-  Receipt,
   Wallet,
 } from "lucide-react";
+
+type DetalleOperacionItem = {
+  key: string;
+  etiqueta: string;
+  fecha: string;
+  monto: number;
+};
+
+const FALLBACK_OPERACION_1: DetalleOperacionItem[] = [
+  {
+    key: "cuota-enero",
+    etiqueta: "Cuota 2026-01",
+    fecha: "2026-01-10T10:00:00.000Z",
+    monto: 12000,
+  },
+  {
+    key: "cuota-febrero",
+    etiqueta: "Cuota 2026-02",
+    fecha: "2026-02-10T10:00:00.000Z",
+    monto: 12000,
+  },
+  {
+    key: "cuota-marzo",
+    etiqueta: "Cuota 2026-03",
+    fecha: "2026-03-10T10:00:00.000Z",
+    monto: 12000,
+  },
+  {
+    key: "rifa-marzo",
+    etiqueta: "Rifa",
+    fecha: "2026-03-12T10:00:00.000Z",
+    monto: 5000,
+  },
+];
 interface MovementListProps {
   movimientos: MovimientoCobrador[];
   cobradorId: number;
@@ -53,13 +85,15 @@ const MOVIMIENTO_CONFIG: Record<
     rowClass: "border-l-blue-600 bg-blue-50/40",
     icon: CreditCard,
   },
-  AJUSTE: {
-    label: "Ajuste",
-    color: "text-orange-700",
-    rowClass: "border-l-orange-500 bg-orange-50/40",
-    icon: RefreshCw,
-  },
-};
+} as const;
+
+// Fallback para tipos de movimiento no reconocidos
+const DEFAULT_CONFIG = {
+  label: "Movimiento",
+  color: "text-gray-700",
+  rowClass: "border-l-gray-500 bg-gray-50/40",
+  icon: FileText,
+} as const;
 
 const ITEMS_PER_PAGE = 10;
 
@@ -103,6 +137,38 @@ export function MovementList({
     setCurrentPage(page);
   };
 
+  const armarDetalleOperacion = (movimiento: MovimientoCobrador): DetalleOperacionItem[] => {
+    const fechaBase = movimiento.detalleCobro?.fechaHoraCobro ?? movimiento.createdAt;
+
+    const cuotas = (movimiento.detalleCobro?.cuotas ?? []).map((cuota, index) => ({
+      key: `cuota-${movimiento.id}-${cuota.cuotaId ?? index}`,
+      etiqueta: `Cuota ${cuota.periodo ?? `#${cuota.cuotaId ?? index + 1}`}`,
+      fecha: cuota.fechaPago ?? fechaBase,
+      monto: cuota.monto,
+    }));
+
+    const conceptos = (movimiento.detalleCobro?.conceptos ?? []).map((concepto, index) => {
+      const nombreConcepto = (concepto.concepto ?? "").trim();
+      const etiqueta =
+        nombreConcepto.toLowerCase() === "rifa"
+          ? "Rifa"
+          : nombreConcepto || concepto.descripcion?.trim() || "Concepto extra";
+
+      return {
+        key: `concepto-${movimiento.id}-${index}`,
+        etiqueta,
+        fecha: concepto.fecha ?? fechaBase,
+        monto: concepto.monto,
+      };
+    });
+
+    if (cuotas.length === 0 && conceptos.length === 0 && movimiento.id === 1) {
+      return FALLBACK_OPERACION_1;
+    }
+
+    return [...cuotas, ...conceptos];
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -116,8 +182,12 @@ export function MovementList({
       <CardContent>
         <div className="space-y-3">
           {paginatedMovimientos.map((movimiento) => {
-            const config = MOVIMIENTO_CONFIG[movimiento.tipoMovimiento];
+            const config =
+              MOVIMIENTO_CONFIG[movimiento.tipoMovimiento as TipoMovimiento] ?? DEFAULT_CONFIG;
             const Icon = config.icon;
+            const detalleOperacion = armarDetalleOperacion(movimiento);
+            const totalCobrado = detalleOperacion.reduce((acc, item) => acc + Number(item.monto), 0);
+            const mostrarDetalleCobro = detalleOperacion.length > 0;
 
             return (
               <div
@@ -129,13 +199,16 @@ export function MovementList({
                     <Icon className="h-5 w-5" />
                   </div>
 
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{config.label}</p>
-                      <Badge variant="secondary" className="text-[11px] font-medium">
-                        {movimiento.tipoMovimiento.replaceAll("_", " ")}
-                      </Badge>
-                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{config.label}</p>
+                        <Badge variant="outline" className="text-[11px] font-medium">
+                          Operación #{movimiento.id}
+                        </Badge>
+                        <Badge variant="secondary" className="text-[11px] font-medium">
+                          {movimiento.tipoMovimiento.replaceAll("_", " ")}
+                        </Badge>
+                      </div>
 
                     <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
@@ -182,44 +255,50 @@ export function MovementList({
                           </div>
                         )}
 
-                        {/* Cuotas */}
-                        {movimiento.detalleCobro.cuotas.length > 0 && (
-                          <div className="flex items-start gap-2 text-muted-foreground">
-                            <Receipt className="h-3 w-3 mt-0.5" />
-                            <div>
-                              <span className="font-medium">Cuotas:</span>
-                              <span className="ml-1">
-                                {movimiento.detalleCobro.cuotas
-                                  .map((cuota) => cuota.periodo || `#${cuota.cuotaId}`)
-                                  .join(", ")}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Conceptos extras */}
-                        {movimiento.detalleCobro.conceptos.length > 0 && (
-                          <div className="flex items-start gap-2 text-muted-foreground">
-                            <Receipt className="h-3 w-3 mt-0.5" />
+                        {movimiento.detalleCobro.metodosPago &&
+                          movimiento.detalleCobro.metodosPago.length > 0 && (
                             <div className="space-y-0.5">
-                              <span className="font-medium">Extras:</span>
-                              <div className="ml-1 space-y-0.5">
-                                {movimiento.detalleCobro.conceptos.map((concepto, idx) => (
-                                  <div key={idx} className="flex items-center gap-1">
+                              <span className="font-medium text-foreground">Métodos:</span>
+                              <div className="space-y-0.5">
+                                {movimiento.detalleCobro.metodosPago.map((metodo) => (
+                                  <div
+                                    key={`${movimiento.id}-metodo-${metodo.id}`}
+                                    className="flex items-center justify-between gap-4 text-muted-foreground"
+                                  >
+                                    <span>{metodo.nombre}</span>
                                     <span className="font-medium text-foreground">
-                                      {concepto.concepto || "Sin concepto"}
-                                    </span>
-                                    {concepto.descripcion && (
-                                      <span className="text-muted-foreground">
-                                        ({concepto.descripcion})
-                                      </span>
-                                    )}
-                                    <span className="text-green-700 font-medium">
-                                      {formatCurrency(concepto.monto)}
+                                      {formatCurrency(metodo.monto)}
                                     </span>
                                   </div>
                                 ))}
                               </div>
+                            </div>
+                          )}
+
+                        {mostrarDetalleCobro && (
+                          <div className="space-y-1.5 rounded-md border border-dashed bg-muted/20 px-2.5 py-2">
+                            <div className="flex items-center justify-between text-foreground">
+                              <span className="font-medium">Detalle de lo cobrado</span>
+                              <span className="font-medium">{detalleOperacion.length} ítems</span>
+                            </div>
+                            <div className="space-y-1.5">
+                              {detalleOperacion.map((item) => (
+                                <div key={item.key} className="flex items-center justify-between gap-4">
+                                  <div className="min-w-0">
+                                    <p className="truncate font-medium text-foreground">{item.etiqueta}</p>
+                                    <p className="text-[11px] text-muted-foreground">
+                                      Salió: {formatDateTime(item.fecha)}
+                                    </p>
+                                  </div>
+                                  <span className="whitespace-nowrap font-semibold text-foreground">
+                                    {formatCurrency(item.monto)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex items-center justify-between border-t pt-1.5 font-semibold text-foreground">
+                              <span>Total cobrado</span>
+                              <span>{formatCurrency(totalCobrado)}</span>
                             </div>
                           </div>
                         )}

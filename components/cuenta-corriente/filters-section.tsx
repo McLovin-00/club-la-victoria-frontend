@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarIcon, ChevronDown, X, Search } from "lucide-react";
+import { CalendarIcon, ChevronDown, X, Search, SlidersHorizontal } from "lucide-react";
 import { format } from "date-fns";
 import {
   DateRangePreset,
@@ -40,9 +39,8 @@ interface FiltersSectionProps {
 
 const TIPO_MOVIMIENTO_LABELS: Record<TipoMovimiento | "TODOS", string> = {
   TODOS: "Todos los tipos",
-  COMISION_GENERADA: "Comisiones generadas",
-  PAGO_A_COBRADOR: "Pagos al cobrador",
-  AJUSTE: "Ajustes",
+  COMISION_GENERADA: "Comisiones",
+  PAGO_A_COBRADOR: "Pagos",
 };
 
 const DATE_RANGE_PRESET_LABELS: Record<DateRangePreset | "CUSTOM", string> = {
@@ -52,7 +50,7 @@ const DATE_RANGE_PRESET_LABELS: Record<DateRangePreset | "CUSTOM", string> = {
   THIS_MONTH: "Este mes",
   THIS_YEAR: "Este año",
   LAST_YEAR: "Año pasado",
-  CUSTOM: "Rango personalizado",
+  CUSTOM: "Personalizado",
 };
 
 export function FiltersSection({
@@ -68,7 +66,7 @@ export function FiltersSection({
   const [tempStartDate, setTempStartDate] = useState(startDate);
   const [tempEndDate, setTempEndDate] = useState(endDate);
   const [selectedPreset, setSelectedPreset] = useState<DateRangePreset | "CUSTOM">(
-    getPresetFromDateRange(startDate, endDate),
+    () => getPresetFromDateRange(startDate, endDate),
   );
   const [hasPendingChanges, setHasPendingChanges] = useState(false);
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
@@ -95,7 +93,7 @@ export function FiltersSection({
 
   const handleEndDateChange = (value: string) => {
     const newDate = new Date(value);
-    newDate.setHours(23, 59, 59); // End of day
+    newDate.setHours(23, 59, 59);
     setTempEndDate(newDate);
     setSelectedPreset("CUSTOM");
     setHasPendingChanges(true);
@@ -104,6 +102,7 @@ export function FiltersSection({
   const handlePresetChange = (value: string) => {
     if (value === "CUSTOM") {
       setSelectedPreset("CUSTOM");
+      setIsAdvancedOpen(true);
       return;
     }
 
@@ -136,6 +135,7 @@ export function FiltersSection({
     setTempEndDate(defaults.endDate);
     setSelectedPreset("THIS_MONTH");
     setHasPendingChanges(false);
+    setIsAdvancedOpen(false);
   };
 
   const defaults = getDefaultDateRange();
@@ -146,140 +146,130 @@ export function FiltersSection({
     endDate.toDateString() !== defaults.endDate.toDateString();
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Filtros</CardTitle>
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleClearAllFilters}
-              className="h-8 px-2 text-xs"
-            >
-              <X className="mr-1 h-3 w-3" />
-              Restablecer
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {/* Buscador de socio */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Buscar socio</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Nombre, apellido o DNI..."
-                value={busquedaSocio}
-                onChange={(e) => onBusquedaSocioChange(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </div>
-
-          {/* Tipo de movimiento */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Tipo de movimiento</label>
-            <Select
-              value={tipoMovimiento}
-              onValueChange={(value) =>
-                onTipoMovimientoChange(value as TipoMovimiento | "TODOS")
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(TIPO_MOVIMIENTO_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Período rápido */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Período rápido</label>
-            <Select value={selectedPreset} onValueChange={handlePresetChange}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(DATE_RANGE_PRESET_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+    <div className="space-y-2">
+      {/* Filtros principales — fila inline sin card */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        {/* Buscador de socio */}
+        <div className="relative sm:flex-1 sm:max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            id="busqueda-socio"
+            type="text"
+            placeholder="Buscar socio..."
+            value={busquedaSocio}
+            onChange={(e) => onBusquedaSocioChange(e.target.value)}
+            className="h-8 pl-8 text-sm"
+          />
         </div>
 
+        {/* Tipo de movimiento */}
+        <Select
+          value={tipoMovimiento}
+          onValueChange={(value) =>
+            onTipoMovimientoChange(value as TipoMovimiento | "TODOS")
+          }
+        >
+          <SelectTrigger className="h-8 w-auto min-w-[140px] text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(TIPO_MOVIMIENTO_LABELS).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Período rápido */}
+        <Select value={selectedPreset} onValueChange={handlePresetChange}>
+          <SelectTrigger className="h-8 w-auto min-w-[130px] text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(DATE_RANGE_PRESET_LABELS).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Botón para fechas avanzadas */}
         <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
           <CollapsibleTrigger asChild>
             <Button
               type="button"
               variant="ghost"
-              className="mt-3 h-8 px-2 text-xs text-muted-foreground"
+              size="sm"
+              className="h-8 gap-1 text-xs text-muted-foreground"
             >
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Fechas
               <ChevronDown
-                className={`mr-1 h-4 w-4 transition-transform ${isAdvancedOpen ? "rotate-180" : ""}`}
+                className={`h-3 w-3 transition-transform ${isAdvancedOpen ? "rotate-180" : ""}`}
               />
-              Filtros avanzados por fecha
             </Button>
           </CollapsibleTrigger>
-
-          <CollapsibleContent className="mt-2 space-y-4 border-t pt-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Fecha desde</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="date"
-                    value={format(tempStartDate, "yyyy-MM-dd")}
-                    onChange={(e) => handleStartDateChange(e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Fecha hasta</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="date"
-                    value={format(tempEndDate, "yyyy-MM-dd")}
-                    onChange={(e) => handleEndDateChange(e.target.value)}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                  <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                </div>
-              </div>
-            </div>
-
-            {hasPendingChanges && (
-              <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/20 px-3 py-2">
-                <Button size="sm" onClick={handleApplyDateRange}>
-                  Aplicar rango
-                </Button>
-                <Button size="sm" variant="outline" onClick={handleCancelChanges}>
-                  Cancelar
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  Tenés cambios pendientes en el rango de fechas.
-                </span>
-              </div>
-            )}
-          </CollapsibleContent>
         </Collapsible>
 
-      </CardContent>
-    </Card>
+        {/* Limpiar filtros */}
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearAllFilters}
+            className="h-8 gap-1 text-xs text-muted-foreground hover:text-destructive"
+          >
+            <X className="h-3 w-3" />
+            Limpiar
+          </Button>
+        )}
+      </div>
+
+      {/* Panel avanzado de fechas */}
+      <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen}>
+        <CollapsibleContent>
+          <div className="rounded-lg border bg-muted/20 p-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="space-y-1 sm:flex-1">
+                <label className="text-xs font-medium text-muted-foreground" htmlFor="fecha-desde">
+                  Desde
+                </label>
+                <input
+                  id="fecha-desde"
+                  type="date"
+                  value={format(tempStartDate, "yyyy-MM-dd")}
+                  onChange={(e) => handleStartDateChange(e.target.value)}
+                  className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+              </div>
+              <div className="space-y-1 sm:flex-1">
+                <label className="text-xs font-medium text-muted-foreground" htmlFor="fecha-hasta">
+                  Hasta
+                </label>
+                <input
+                  id="fecha-hasta"
+                  type="date"
+                  value={format(tempEndDate, "yyyy-MM-dd")}
+                  onChange={(e) => handleEndDateChange(e.target.value)}
+                  className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 py-1 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+              </div>
+              {hasPendingChanges && (
+                <div className="flex gap-1.5">
+                  <Button size="sm" className="h-8" onClick={handleApplyDateRange}>
+                    Aplicar
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-8" onClick={handleCancelChanges}>
+                    Cancelar
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
   );
 }

@@ -1,7 +1,7 @@
 // lib/cuenta-corriente-utils.ts
 import { MovimientoCobrador } from "@/hooks/api/cobradores/useCobradorCuentaCorriente";
 
-export type TipoMovimiento = "COMISION_GENERADA" | "PAGO_A_COBRADOR" | "AJUSTE";
+export type TipoMovimiento = "COMISION_GENERADA" | "PAGO_A_COBRADOR";
 export type DateRangePreset =
   | "TODAY"
   | "THIS_WEEK"
@@ -10,18 +10,23 @@ export type DateRangePreset =
   | "THIS_YEAR"
   | "LAST_YEAR";
 
+export interface MetodoPagoDesglose {
+  metodoPago: string;
+  totalCobrado: number;
+  cantidadPagos: number;
+}
+
 export interface PeriodSummary {
   totalComisiones: number;
   totalPagos: number;
-  totalAjustes: number;
   totalMovimientos: number;
+  desglosePorMetodoPago: MetodoPagoDesglose[];
 }
 
 export interface ChartDataPoint {
   date: string;
   comisiones: number;
   pagos: number;
-  ajustes: number;
 }
 
 /**
@@ -44,11 +49,13 @@ export function filterMovimientosByDateRange(
 export function calculatePeriodSummary(
   movimientos: MovimientoCobrador[]
 ): PeriodSummary {
+  const metodoPagoMap = new Map<string, { totalCobrado: number; cantidadPagos: number }>();
+
   const summary: PeriodSummary = {
     totalComisiones: 0,
     totalPagos: 0,
-    totalAjustes: 0,
     totalMovimientos: movimientos.length,
+    desglosePorMetodoPago: [],
   };
 
   movimientos.forEach((mov) => {
@@ -57,15 +64,27 @@ export function calculatePeriodSummary(
     switch (mov.tipoMovimiento) {
       case "COMISION_GENERADA":
         summary.totalComisiones += monto;
+        // Acumular por método de pago desde el detalle del cobro
+        if (mov.detalleCobro?.metodoPago?.nombre) {
+          const nombreMetodo = mov.detalleCobro.metodoPago.nombre;
+          const existing = metodoPagoMap.get(nombreMetodo) || { totalCobrado: 0, cantidadPagos: 0 };
+          existing.totalCobrado += monto;
+          existing.cantidadPagos += 1;
+          metodoPagoMap.set(nombreMetodo, existing);
+        }
         break;
       case "PAGO_A_COBRADOR":
         summary.totalPagos += monto;
         break;
-      case "AJUSTE":
-        summary.totalAjustes += monto;
-        break;
     }
   });
+
+  // Convertir mapa a array
+  summary.desglosePorMetodoPago = Array.from(metodoPagoMap.entries()).map(([metodoPago, data]) => ({
+    metodoPago,
+    totalCobrado: data.totalCobrado,
+    cantidadPagos: data.cantidadPagos,
+  }));
 
   return summary;
 }
@@ -91,10 +110,8 @@ export function aggregateMovimientosForChart(
         date: dateKey,
         comisiones: 0,
         pagos: 0,
-        ajustes: 0,
       });
     }
-
     const dataPoint = dateMap.get(dateKey)!;
     // Convertir monto a número (puede venir como string desde el backend)
     const monto = Number(mov.monto) || 0;

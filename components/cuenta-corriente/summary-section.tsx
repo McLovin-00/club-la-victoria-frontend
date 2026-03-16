@@ -1,12 +1,10 @@
 // components/cuenta-corriente/summary-section.tsx
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PeriodSummary } from "@/lib/cuenta-corriente-utils";
-import { formatCurrency } from "@/lib/cuenta-corriente-utils";
-import { CreditCard, RefreshCw, TrendingUp } from "lucide-react";
+import { PeriodSummary, formatCurrency } from "@/lib/cuenta-corriente-utils";
+import { TrendingUp, CreditCard, Banknote, ArrowLeftRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SummarySectionProps {
   saldoActual: number;
@@ -19,81 +17,95 @@ export function SummarySection({
   periodSummary,
   isLoading = false,
 }: SummarySectionProps) {
-  const items = [
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="space-y-2 rounded-lg border p-3">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-6 w-24" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  const metrics = [
+    {
+      label: "Saldo actual",
+      value: formatCurrency(saldoActual),
+      icon: Banknote,
+      color: "text-foreground",
+      accent: saldoActual > 0 ? "border-l-amber-500" : "border-l-emerald-500",
+      emphasis: true,
+    },
     {
       label: "Comisiones",
       value: formatCurrency(periodSummary.totalComisiones),
       icon: TrendingUp,
-      className: "text-green-700",
+      color: "text-green-700",
+      accent: "border-l-green-500",
     },
     {
       label: "Pagos",
       value: formatCurrency(periodSummary.totalPagos),
       icon: CreditCard,
-      className: "text-blue-700",
-    },
-    {
-      label: "Ajustes",
-      value: formatCurrency(periodSummary.totalAjustes),
-      icon: RefreshCw,
-      className: "text-orange-700",
+      color: "text-blue-700",
+      accent: "border-l-blue-500",
     },
   ];
 
   return (
-    <div className="grid gap-4 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Saldo actual</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <Skeleton className="h-9 w-40" />
-          ) : (
-            <>
-              <p className="text-2xl font-medium">{formatCurrency(saldoActual)}</p>
-              <p className="text-xs text-muted-foreground">Balance total del cobrador</p>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-sm font-medium">Resumen del periodo</CardTitle>
-            <Badge variant="secondary" className="text-xs">
-              {periodSummary.totalMovimientos} movimientos
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {isLoading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
+    <div className="space-y-3">
+      {/* Métricas principales en una fila */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {metrics.map((metric) => {
+          const Icon = metric.icon;
+          return (
+            <div
+              key={metric.label}
+              className={cn(
+                "rounded-lg border border-l-[3px] p-3 transition-colors",
+                metric.accent,
+              )}
+            >
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Icon className={cn("h-3.5 w-3.5", metric.color)} />
+                <span>{metric.label}</span>
+              </div>
+              <p className={cn(
+                "mt-1 font-semibold tabular-nums",
+                metric.emphasis ? "text-lg" : "text-sm",
+                metric.color,
+              )}>
+                {metric.value}
+              </p>
             </div>
-          ) : (
-            items.map((item) => {
-              const Icon = item.icon;
+          );
+        })}
+      </div>
 
-              return (
-                <div
-                  key={item.label}
-                  className="flex items-center justify-between rounded-md border bg-muted/20 px-3 py-2"
-                >
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Icon className={`h-4 w-4 ${item.className}`} />
-                    <span>{item.label}</span>
-                  </div>
-                  <p className={`text-sm font-semibold ${item.className}`}>{item.value}</p>
-                </div>
-              );
-            })
-          )}
-        </CardContent>
-      </Card>
+      {/* Desglose por método de pago — solo si hay datos, inline y compacto */}
+      {periodSummary.desglosePorMetodoPago.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground/70">Cobros por método:</span>
+          {periodSummary.desglosePorMetodoPago.map((metodo) => {
+            const isTransferencia = metodo.metodoPago.toLowerCase().includes("transferencia");
+            const Icon = isTransferencia ? ArrowLeftRight : Banknote;
+            const colorClass = isTransferencia ? "text-indigo-600" : "text-emerald-600";
+            return (
+              <span key={metodo.metodoPago} className="inline-flex items-center gap-1">
+                <Icon className={cn("h-3 w-3", colorClass)} />
+                <span>{metodo.metodoPago}</span>
+                <span className={cn("font-semibold", colorClass)}>
+                  {formatCurrency(metodo.totalCobrado)}
+                </span>
+                <span className="text-muted-foreground/50">({metodo.cantidadPagos})</span>
+              </span>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useMemo, useState, useEffect } from "react";
 import {
   ArrowLeft,
   CalendarCheck,
+  CheckCircle,
   CircleAlert,
   CircleCheck,
   ChevronLeft,
@@ -19,6 +20,7 @@ import {
   TrendingDown,
   TrendingUp,
   Wallet,
+  X,
 } from "lucide-react";
 
 import { DashboardLayout } from "@/components/dashboard-layout";
@@ -44,17 +46,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -67,6 +58,7 @@ import { useSocioById } from "@/hooks/api/socios/useSocios";
 import { useRegistrarPago } from "@/hooks/api/cobros/useRegistrarPago";
 import { useMetodosPago } from "@/hooks/api/cobros/useMetodosPago";
 import { usePagoCuotasSeleccionadas } from "@/hooks/api/cobros/usePagoCuotasSeleccionadas";
+import { useProcesarResultadosTarjetaCentro } from "@/hooks/api/cobros/useProcesarResultadosTarjetaCentro";
 import { abrirReciboHtml, abrirReciboMultipleHtml } from "@/hooks/api/cobros/useTalonario";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
@@ -100,19 +92,29 @@ export default function CuentaCorrientePage() {
   const { data: cuentaCorriente, isLoading: isLoadingCuenta } = useCuentaCorriente(socioId);
   const { mutate: registrarPago, isPending: isPagando } = useRegistrarPago();
   const pagoMasivoMutation = usePagoCuotasSeleccionadas();
+  const procesarResultadosTarjetaCentroMutation = useProcesarResultadosTarjetaCentro();
   const [cuotasSeleccionadas, setCuotasSeleccionadas] = useState<number[]>([]);
   const [metodoPrincipalId, setMetodoPrincipalId] = useState<number>(0);
   const [usarSegundoMetodo, setUsarSegundoMetodo] = useState(false);
   const [metodoSecundarioId, setMetodoSecundarioId] = useState<number>(0);
+  const [metodoPagoIndividualId, setMetodoPagoIndividualId] = useState<number>(0);
+  const [modalPagoIndividualAbierto, setModalPagoIndividualAbierto] = useState(false);
+  const [cuotaPagoIndividual, setCuotaPagoIndividual] = useState<{
+    id: number;
+    periodo: string;
+    monto: number;
+  } | null>(null);
 
   const { data: metodosPago } = useMetodosPago();
+  const hayMetodosPagoActivos = (metodosPago?.length ?? 0) > 0;
 
   useEffect(() => {
     if (metodosPago && metodosPago.length > 0) {
       if (!metodoPrincipalId) setMetodoPrincipalId(metodosPago[0].id);
       if (!metodoSecundarioId) setMetodoSecundarioId(metodosPago.length > 1 ? metodosPago[1].id : metodosPago[0].id);
+      if (!metodoPagoIndividualId) setMetodoPagoIndividualId(metodosPago[0].id);
     }
-  }, [metodosPago, metodoPrincipalId, metodoSecundarioId]);
+  }, [metodosPago, metodoPagoIndividualId, metodoPrincipalId, metodoSecundarioId]);
   const [montoMetodoPrincipal, setMontoMetodoPrincipal] = useState("");
   const [montoMetodoSecundario, setMontoMetodoSecundario] = useState("");
   const [observacionesPagoMasivo, setObservacionesPagoMasivo] = useState("");
@@ -149,6 +151,22 @@ export default function CuentaCorrientePage() {
         .sort((a, b) => a.periodo.localeCompare(b.periodo)),
     [cuentaCorriente?.cuotas],
   );
+
+  const cuotasPendientesPagables = useMemo(
+    () =>
+      cuotasPendientes.filter(
+        (cuota) => cuota.tarjetaCentroEstado === "NO_APLICA" || cuota.tarjetaCentroEstado === "RECHAZADA",
+      ),
+    [cuotasPendientes],
+  );
+
+  useEffect(() => {
+    const cuotasPagablesIds = new Set(cuotasPendientesPagables.map((cuota) => cuota.id));
+    setCuotasSeleccionadas((prev) => {
+      const cuotasValidas = prev.filter((cuotaId) => cuotasPagablesIds.has(cuotaId));
+      return cuotasValidas.length === prev.length ? prev : cuotasValidas;
+    });
+  }, [cuotasPendientesPagables]);
 
   const cuotasPendientesSeleccionadas = useMemo(
     () =>
@@ -194,7 +212,8 @@ export default function CuentaCorrientePage() {
     totalValidoParaConfirmar;
 
   const todasPendientesSeleccionadas =
-    cuotasPendientes.length > 0 && cuotasSeleccionadas.length === cuotasPendientes.length;
+    cuotasPendientesPagables.length > 0 &&
+    cuotasPendientesPagables.every((cuota) => cuotasSeleccionadas.includes(cuota.id));
 
   const limpiarFormularioPagoMasivo = () => {
     if (metodosPago && metodosPago.length > 0) {
@@ -215,6 +234,18 @@ export default function CuentaCorrientePage() {
         <span className="inline-flex items-center justify-center rounded-md bg-blue-100 px-2 py-1 text-[10px] font-semibold text-blue-700">
           Tarj. pend.
         </span>
+      );
+    }
+
+    // Si la tarjeta fue rechazada Y la cuota está pagada, mostrar ambos indicadores
+    if (cuota?.tarjetaCentroEstado === "RECHAZADA" && cuota?.estado === "PAGADA") {
+      return (
+        <div className="flex flex-col items-center gap-1">
+          <span className="inline-flex items-center justify-center rounded-md bg-red-100 px-2 py-1 text-[10px] font-semibold text-red-700">
+            Tarj. rech.
+          </span>
+          <span className="text-green-600 font-bold text-lg">✓</span>
+        </div>
       );
     }
 
@@ -251,17 +282,43 @@ export default function CuentaCorrientePage() {
   };
 
   const renderTarjetaEstado = (cuota: {
+    estado: string;
     tarjetaCentroEstado: "PENDIENTE_RESPUESTA" | "APROBADA" | "RECHAZADA" | "NO_APLICA";
     tarjetaCentroDetalle: string;
     tarjetaCentroFechaEstado?: string;
   }) => {
+    // Si la tarjeta fue rechazada Y la cuota está pagada, mostrar ambos indicadores
+    if (cuota.tarjetaCentroEstado === "RECHAZADA" && cuota.estado === "PAGADA") {
+      return (
+        <div className="flex flex-col items-center gap-1 text-center">
+          <div className="flex items-center justify-center gap-1 flex-wrap">
+            <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
+              Tarjeta rechazada
+            </Badge>
+            <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+              Pagada
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">{cuota.tarjetaCentroDetalle}</p>
+        </div>
+      );
+    }
+
     if (cuota.tarjetaCentroEstado === "NO_APLICA") {
+      // Si no aplica tarjeta, mostrar solo el estado de la cuota
+      if (cuota.estado === "PAGADA") {
+        return (
+          <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+            Pagada
+          </Badge>
+        );
+      }
       return <span className="text-xs text-muted-foreground">No aplica</span>;
     }
 
     if (cuota.tarjetaCentroEstado === "PENDIENTE_RESPUESTA") {
       return (
-        <div className="space-y-1">
+        <div className="flex flex-col items-center gap-1 text-center">
           <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
             Tarjeta pendiente
           </Badge>
@@ -272,7 +329,7 @@ export default function CuentaCorrientePage() {
 
     if (cuota.tarjetaCentroEstado === "RECHAZADA") {
       return (
-        <div className="space-y-1">
+        <div className="flex flex-col items-center gap-1 text-center">
           <Badge className="bg-red-100 text-red-700 hover:bg-red-100">
             Tarjeta rechazada
           </Badge>
@@ -281,8 +338,25 @@ export default function CuentaCorrientePage() {
       );
     }
 
+    // Tarjeta aprobada - también mostrar si está pagada
+    if (cuota.estado === "PAGADA") {
+      return (
+        <div className="flex flex-col items-center gap-1 text-center">
+          <div className="flex items-center justify-center gap-1 flex-wrap">
+            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+              Tarjeta aprobada
+            </Badge>
+            <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
+              Pagada
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">{cuota.tarjetaCentroDetalle}</p>
+        </div>
+      );
+    }
+
     return (
-      <div className="space-y-1">
+      <div className="flex flex-col items-center gap-1 text-center">
         <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
           Tarjeta aprobada
         </Badge>
@@ -291,14 +365,53 @@ export default function CuentaCorrientePage() {
     );
   };
 
-  const handlePagarCuota = (cuotaId: number) => {
-    registrarPago({
-      cuotaId,
-      metodoPagoId: metodoPrincipalId || (metodosPago?.[0]?.id ?? 1),
+  const cuotaTarjetaPendiente = (cuota: { tarjetaCentroEstado: "PENDIENTE_RESPUESTA" | "APROBADA" | "RECHAZADA" | "NO_APLICA" }) =>
+    cuota.tarjetaCentroEstado === "PENDIENTE_RESPUESTA";
+
+  const cuotaPagableManual = (cuota: { tarjetaCentroEstado: "PENDIENTE_RESPUESTA" | "APROBADA" | "RECHAZADA" | "NO_APLICA" }) =>
+    cuota.tarjetaCentroEstado === "NO_APLICA" || cuota.tarjetaCentroEstado === "RECHAZADA";
+
+  const abrirModalPagoIndividual = (cuota: { id: number; periodo: string; monto: number }) => {
+    setCuotaPagoIndividual(cuota);
+    setMetodoPagoIndividualId(metodoPrincipalId || (metodosPago?.[0]?.id ?? 0));
+    setModalPagoIndividualAbierto(true);
+  };
+
+  const handleConfirmarPagoIndividual = () => {
+    if (!cuotaPagoIndividual || !metodoPagoIndividualId) {
+      return;
+    }
+
+    registrarPago(
+      {
+        cuotaId: cuotaPagoIndividual.id,
+        metodoPagoId: metodoPagoIndividualId,
+      },
+      {
+        onSuccess: () => {
+          setModalPagoIndividualAbierto(false);
+          setCuotaPagoIndividual(null);
+        },
+      },
+    );
+  };
+
+  const handleProcesarCuotaTarjetaCentro = (cuotaId: number, aprobada: boolean) => {
+    procesarResultadosTarjetaCentroMutation.mutate({
+      resultados: [
+        {
+          cuotaId,
+          aprobada,
+        },
+      ],
     });
   };
 
-  const toggleCuotaSeleccionada = (cuotaId: number, checked: boolean) => {
+  const toggleCuotaSeleccionada = (cuotaId: number, checked: boolean, puedeSeleccionar: boolean) => {
+    if (checked && !puedeSeleccionar) {
+      return;
+    }
+
     setCuotasSeleccionadas((prev) => {
       if (checked) {
         return prev.includes(cuotaId) ? prev : [...prev, cuotaId];
@@ -308,7 +421,7 @@ export default function CuentaCorrientePage() {
   };
 
   const seleccionarTodasPendientes = () => {
-    setCuotasSeleccionadas(cuotasPendientes.map((cuota) => cuota.id));
+    setCuotasSeleccionadas(cuotasPendientesPagables.map((cuota) => cuota.id));
   };
 
   const limpiarSeleccionCuotas = () => {
@@ -578,7 +691,7 @@ export default function CuentaCorrientePage() {
                     </div>
                     {socio?.tarjetaCentro && (
                       <p className="mb-4 text-sm text-muted-foreground">
-                        Si la tarjeta del centro fue rechazada, podés imprimir el recibo desde aquí y luego registrar el pago.
+                        Si la tarjeta está pendiente, primero aprobala o rechazala. Solo se puede registrar pago manual cuando la tarjeta fue rechazada.
                       </p>
                     )}
 
@@ -586,7 +699,7 @@ export default function CuentaCorrientePage() {
                       <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                         <div className="space-y-1">
                           <p className="text-sm font-semibold">
-                            Seleccionadas: {cuotasSeleccionadas.length} de {cuotasPendientes.length}
+                            Seleccionadas: {cuotasSeleccionadas.length} de {cuotasPendientesPagables.length}
                           </p>
                           <p className="text-sm text-muted-foreground leading-none">
                             Total seleccionado: {formatCurrency(totalSeleccionado)}
@@ -598,9 +711,10 @@ export default function CuentaCorrientePage() {
                             variant="outline"
                             size="sm"
                             onClick={seleccionarTodasPendientes}
+                            disabled={cuotasPendientesPagables.length === 0}
                           >
                             <ListChecks className="mr-1 h-4 w-4" />
-                            Seleccionar todas adeudadas
+                            Seleccionar todas pagables
                           </Button>
                           <Button
                             type="button"
@@ -642,7 +756,11 @@ export default function CuentaCorrientePage() {
                             type="button"
                             className="bg-green-600 hover:bg-green-700"
                             onClick={abrirModalPagoMasivo}
-                            disabled={cuotasSeleccionadas.length === 0 || pagoMasivoMutation.isPending}
+                            disabled={
+                              cuotasSeleccionadas.length === 0 ||
+                              pagoMasivoMutation.isPending ||
+                              !hayMetodosPagoActivos
+                            }
                           >
                             <CreditCard className="h-4 w-4 mr-1" />
                             Registrar pago
@@ -695,11 +813,17 @@ export default function CuentaCorrientePage() {
                                     <SelectValue placeholder="Seleccione un método" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {metodosPago?.map((metodo) => (
-                                      <SelectItem key={metodo.id} value={String(metodo.id)}>
-                                        {metodo.nombre}
+                                    {hayMetodosPagoActivos ? (
+                                      metodosPago?.map((metodo) => (
+                                        <SelectItem key={metodo.id} value={String(metodo.id)}>
+                                          {metodo.nombre}
+                                        </SelectItem>
+                                      ))
+                                    ) : (
+                                      <SelectItem value="sin-metodos-principal" disabled>
+                                        No hay métodos de pago activos
                                       </SelectItem>
-                                    ))}
+                                    )}
                                   </SelectContent>
                                 </Select>
                               </div>
@@ -740,11 +864,17 @@ export default function CuentaCorrientePage() {
                                       <SelectValue placeholder="Seleccione un método" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {metodosPago?.map((metodo) => (
-                                        <SelectItem key={metodo.id} value={String(metodo.id)}>
-                                          {metodo.nombre}
+                                      {hayMetodosPagoActivos ? (
+                                        metodosPago?.map((metodo) => (
+                                          <SelectItem key={metodo.id} value={String(metodo.id)}>
+                                            {metodo.nombre}
+                                          </SelectItem>
+                                        ))
+                                      ) : (
+                                        <SelectItem value="sin-metodos-secundario" disabled>
+                                          No hay métodos de pago activos
                                         </SelectItem>
-                                      ))}
+                                      )}
                                     </SelectContent>
                                   </Select>
                                 </div>
@@ -805,6 +935,11 @@ export default function CuentaCorrientePage() {
                           <p className="text-sm text-muted-foreground">
                             Total seleccionado: {formatCurrency(totalSeleccionado)} · Total ingresado: {formatCurrency(totalIngresadoMetodos)}
                           </p>
+                          {!hayMetodosPagoActivos && (
+                            <p className="text-sm font-medium text-red-600">
+                              No hay métodos de pago activos. Activá o creá métodos desde backend para registrar pagos.
+                            </p>
+                          )}
                         </div>
 
                         <DialogFooter className="pt-2">
@@ -819,9 +954,102 @@ export default function CuentaCorrientePage() {
                             type="button"
                             className="bg-green-600 hover:bg-green-700"
                             onClick={handlePagarCuotasSeleccionadas}
-                            disabled={pagoMasivoMutation.isPending || !puedeConfirmarPagoMasivo}
+                            disabled={
+                              pagoMasivoMutation.isPending ||
+                              !puedeConfirmarPagoMasivo ||
+                              !hayMetodosPagoActivos
+                            }
                           >
                             {pagoMasivoMutation.isPending ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Procesando...
+                              </>
+                            ) : (
+                              "Confirmar pago"
+                            )}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+
+                    <Dialog
+                      open={modalPagoIndividualAbierto}
+                      onOpenChange={(open) => {
+                        setModalPagoIndividualAbierto(open);
+                        if (!open) {
+                          setCuotaPagoIndividual(null);
+                        }
+                      }}
+                    >
+                      <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                          <DialogTitle className="flex items-center gap-2">
+                            <CreditCard className="h-5 w-5 text-primary" />
+                            Registrar pago
+                          </DialogTitle>
+                          <DialogDescription>
+                            {cuotaPagoIndividual
+                              ? (
+                                <>
+                                  Cuota <strong>{cuotaPagoIndividual.periodo}</strong> por{" "}
+                                  <strong>{formatCurrency(cuotaPagoIndividual.monto)}</strong>.
+                                </>
+                              )
+                              : "Seleccioná un método de pago para continuar."}
+                          </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-2">
+                          <Label>Método de pago</Label>
+                          <Select
+                            value={metodoPagoIndividualId ? String(metodoPagoIndividualId) : ""}
+                            onValueChange={(value) => setMetodoPagoIndividualId(Number(value))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Seleccione un método" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {hayMetodosPagoActivos ? (
+                                metodosPago?.map((metodo) => (
+                                  <SelectItem key={metodo.id} value={String(metodo.id)}>
+                                    {metodo.nombre}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <SelectItem value="sin-metodos-individual" disabled>
+                                  No hay métodos de pago activos
+                                </SelectItem>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          {!hayMetodosPagoActivos && (
+                            <p className="text-sm font-medium text-red-600">
+                              No hay métodos de pago activos. Revisá la carga en la tabla `metodos_pago`.
+                            </p>
+                          )}
+                        </div>
+
+                        <DialogFooter>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setModalPagoIndividualAbierto(false)}
+                          >
+                            Cancelar
+                          </Button>
+                          <Button
+                            type="button"
+                            className="bg-green-600 hover:bg-green-700"
+                            onClick={handleConfirmarPagoIndividual}
+                            disabled={
+                              isPagando ||
+                              !metodoPagoIndividualId ||
+                              !cuotaPagoIndividual ||
+                              !hayMetodosPagoActivos
+                            }
+                          >
+                            {isPagando ? (
                               <>
                                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                 Procesando...
@@ -845,6 +1073,7 @@ export default function CuentaCorrientePage() {
                             <input
                               type="checkbox"
                               checked={todasPendientesSeleccionadas}
+                              disabled={cuotasPendientesPagables.length === 0}
                               onChange={(e) => {
                                 if (e.target.checked) {
                                   seleccionarTodasPendientes();
@@ -862,9 +1091,10 @@ export default function CuentaCorrientePage() {
                               type="checkbox"
                               checked={cuotasSeleccionadas.includes(cuota.id)}
                               onChange={(e) =>
-                                toggleCuotaSeleccionada(cuota.id, e.target.checked)
+                                toggleCuotaSeleccionada(cuota.id, e.target.checked, cuotaPagableManual(cuota))
                               }
                               aria-label={`Seleccionar cuota ${cuota.periodo}`}
+                              disabled={!cuotaPagableManual(cuota)}
                             />
                           ),
                         },
@@ -913,38 +1143,47 @@ export default function CuentaCorrientePage() {
                                 Imprimir recibo
                               </Button>
 
-                              <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                  <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                                    <CreditCard className="h-4 w-4 mr-1" />
-                                    Pagar
+                              {cuotaTarjetaPendiente(cuota) ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    className="bg-green-600 hover:bg-green-700"
+                                    disabled={procesarResultadosTarjetaCentroMutation.isPending}
+                                    onClick={() => handleProcesarCuotaTarjetaCentro(cuota.id, true)}
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-1" />
+                                    Aprobar
                                   </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Confirmar pago</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      ¿Desea registrar el pago de la cuota <strong>{cuota.periodo}</strong> por <strong>{formatCurrency(Number(cuota.monto))}</strong>?
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => handlePagarCuota(cuota.id)}
-                                      className="bg-green-600 hover:bg-green-700"
-                                    >
-                                      {isPagando ? (
-                                        <>
-                                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                          Procesando...
-                                        </>
-                                      ) : (
-                                        "Confirmar pago"
-                                      )}
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
-                              </AlertDialog>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                    disabled={procesarResultadosTarjetaCentroMutation.isPending}
+                                    onClick={() => handleProcesarCuotaTarjetaCentro(cuota.id, false)}
+                                  >
+                                    <X className="h-4 w-4 mr-1" />
+                                    Rechazar
+                                  </Button>
+                                </>
+                              ) : cuotaPagableManual(cuota) ? (
+                                <Button
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700"
+                                  disabled={!hayMetodosPagoActivos}
+                                  onClick={() =>
+                                    abrirModalPagoIndividual({
+                                      id: cuota.id,
+                                      periodo: cuota.periodo,
+                                      monto: Number(cuota.monto),
+                                    })
+                                  }
+                                >
+                                  <CreditCard className="h-4 w-4 mr-1" />
+                                  Pagar
+                                </Button>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">Sin acciones</span>
+                              )}
                             </div>
                           ),
                         },
@@ -957,10 +1196,11 @@ export default function CuentaCorrientePage() {
                                 type="checkbox"
                                 checked={cuotasSeleccionadas.includes(cuota.id)}
                                 onChange={(e) =>
-                                  toggleCuotaSeleccionada(cuota.id, e.target.checked)
+                                  toggleCuotaSeleccionada(cuota.id, e.target.checked, cuotaPagableManual(cuota))
                                 }
                                 aria-label={`Seleccionar cuota ${cuota.periodo}`}
                                 className="mt-1"
+                                disabled={!cuotaPagableManual(cuota)}
                               />
                               <div>
                                 <p className="font-semibold">{cuota.periodo}</p>
@@ -993,38 +1233,47 @@ export default function CuentaCorrientePage() {
                               Imprimir recibo
                             </Button>
 
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="sm" className="bg-green-600 hover:bg-green-700 w-full">
-                                  <CreditCard className="h-4 w-4 mr-1" />
-                                  Pagar
+                            {cuotaTarjetaPendiente(cuota) ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700 w-full"
+                                  disabled={procesarResultadosTarjetaCentroMutation.isPending}
+                                  onClick={() => handleProcesarCuotaTarjetaCentro(cuota.id, true)}
+                                >
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Aprobar
                                 </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Confirmar pago</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    ¿Desea registrar el pago de la cuota <strong>{cuota.periodo}</strong> por <strong>{formatCurrency(Number(cuota.monto))}</strong>?
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handlePagarCuota(cuota.id)}
-                                    className="bg-green-600 hover:bg-green-700"
-                                  >
-                                    {isPagando ? (
-                                      <>
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        Procesando...
-                                      </>
-                                    ) : (
-                                      "Confirmar pago"
-                                    )}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="border-red-500 text-red-600 hover:bg-red-50 hover:text-red-700 w-full"
+                                  disabled={procesarResultadosTarjetaCentroMutation.isPending}
+                                  onClick={() => handleProcesarCuotaTarjetaCentro(cuota.id, false)}
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Rechazar
+                                </Button>
+                              </>
+                            ) : cuotaPagableManual(cuota) ? (
+                              <Button
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 w-full"
+                                disabled={!hayMetodosPagoActivos}
+                                onClick={() =>
+                                  abrirModalPagoIndividual({
+                                    id: cuota.id,
+                                    periodo: cuota.periodo,
+                                    monto: Number(cuota.monto),
+                                  })
+                                }
+                              >
+                                <CreditCard className="h-4 w-4 mr-1" />
+                                Pagar
+                              </Button>
+                            ) : (
+                              <p className="text-xs text-muted-foreground text-center">Sin acciones disponibles</p>
+                            )}
                           </div>
                         </div>
                       )}

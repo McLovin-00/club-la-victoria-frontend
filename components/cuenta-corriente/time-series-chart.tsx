@@ -32,10 +32,6 @@ const chartConfig: ChartConfig = {
     label: "Pagos",
     color: "hsl(var(--chart-2))",
   },
-  ajustes: {
-    label: "Ajustes",
-    color: "hsl(var(--chart-3))",
-  },
 };
 
 export function TimeSeriesChart({ data, isLoading = false }: TimeSeriesChartProps) {
@@ -100,13 +96,6 @@ export function TimeSeriesChart({ data, isLoading = false }: TimeSeriesChartProp
                 type="monotone"
                 dataKey="pagos"
                 stroke="hsl(var(--chart-2))"
-                strokeWidth={2}
-                dot={false}
-              />
-              <Line
-                type="monotone"
-                dataKey="ajustes"
-                stroke="hsl(var(--chart-3))"
                 strokeWidth={2}
                 dot={false}
               />
