@@ -1,7 +1,6 @@
 "use client";
 import React from "react";
 
-import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -11,16 +10,11 @@ import {
   Eye,
   FileText,
   Loader2,
-  Mail,
-  MapPin,
-  Phone,
   Plus,
   Search,
   Trash2,
   User,
   Users,
-  Calendar,
-  CreditCard,
 } from "lucide-react";
 
 
@@ -40,12 +34,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,21 +61,7 @@ const getNombreCategoria = (socio: SocioListado): string => {
   return socio.categoriaNombre || socio.nombreCategoria || "Sin categoría";
 };
 
-const formatDate = (dateString?: string): string => {
-  if (!dateString) return "-";
-  try {
-    return new Date(dateString).toLocaleDateString("es-AR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-  } catch {
-    return dateString;
-  }
-};
-
 export const MemberManagement = React.memo(function MemberManagement() {
-  const [selectedSocio, setSelectedSocio] = useState<SocioListado | null>(null);
   const {
     data: sociosPaginados,
     total,
@@ -139,16 +113,17 @@ export const MemberManagement = React.memo(function MemberManagement() {
       <div className="flex items-center justify-end gap-2">
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedSocio(socio)}
-              aria-label="Ver detalles"
-              className="text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white bg-transparent"
-            >
-              <Eye className="h-4 w-4" />
-              <span className="sr-only">Ver detalles</span>
-            </Button>
+            <Link href={`/socios/${socio.id}`}>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label="Ver detalles"
+                className="text-blue-600 border-blue-600 hover:bg-blue-600 hover:text-white bg-transparent"
+              >
+                <Eye className="h-4 w-4" />
+                <span className="sr-only">Ver detalles</span>
+              </Button>
+            </Link>
           </TooltipTrigger>
           <TooltipContent sideOffset={8}>Ver detalles</TooltipContent>
         </Tooltip>
@@ -452,139 +427,6 @@ export const MemberManagement = React.memo(function MemberManagement() {
       </Card>
     </div>
 
-      {/* Modal de detalles del socio */}
-      <Dialog open={!!selectedSocio} onOpenChange={(open) => !open && setSelectedSocio(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-          <DialogHeader className="px-6 py-4 border-b">
-            <DialogTitle className="text-xl">Detalles del Socio</DialogTitle>
-          </DialogHeader>
-          
-          {selectedSocio && (
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {/* Header con foto y datos principales */}
-              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 pb-6 border-b">
-                <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-full bg-muted overflow-hidden border-2 border-border shadow-sm">
-                  {selectedSocio.fotoUrl ? (
-                    <Image
-                      src={selectedSocio.fotoUrl}
-                      alt={selectedSocio.nombre}
-                      width={96}
-                      height={96}
-                      sizes="96px"
-                      className="h-24 w-24 rounded-full object-cover"
-                    />
-                  ) : (
-                    <User className="h-10 w-10 text-muted-foreground" />
-                  )}
-                </div>
-                <div className="text-center sm:text-left flex-1 min-w-0">
-                  <h2 className="text-2xl font-bold text-foreground truncate">
-                    {`${selectedSocio.apellido}, ${selectedSocio.nombre}`}
-                  </h2>
-                  <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-3">
-                    {renderCategoriaBadge(selectedSocio)}
-                    {renderEstadoBadge(selectedSocio.estado)}
-                  </div>
-                </div>
-              </div>
-
-              {/* Información de contacto */}
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                  Información de Contacto
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="flex items-start gap-3 p-3 rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <User className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground font-medium mb-1">DNI</p>
-                      <p className="font-semibold text-sm">{selectedSocio.dni}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <Mail className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground font-medium mb-1">Email</p>
-                      <p className="font-semibold text-sm break-all">{selectedSocio.email || "-"}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <Phone className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground font-medium mb-1">Teléfono</p>
-                      <p className="font-semibold text-sm">{selectedSocio.telefono || "-"}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <MapPin className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground font-medium mb-1">Dirección</p>
-                      <p className="font-semibold text-sm break-words">{selectedSocio.direccion || "-"}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Información de fechas */}
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                  Fechas
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="flex items-start gap-3 p-3 rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <Calendar className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground font-medium mb-1">Nacimiento</p>
-                      <p className="font-semibold text-sm">{formatDate(selectedSocio.fechaNacimiento)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <Calendar className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground font-medium mb-1">Ingreso</p>
-                      <p className="font-semibold text-sm">{formatDate(selectedSocio.fechaIngreso)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <Calendar className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground font-medium mb-1">Alta</p>
-                      <p className="font-semibold text-sm">{formatDate(selectedSocio.fechaAlta)}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Información adicional */}
-              <div>
-                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                  Información Adicional
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div className="flex items-start gap-3 p-3 rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <CreditCard className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground font-medium mb-1">Tarjeta Centro</p>
-                      <p className="font-semibold text-sm">
-                        {selectedSocio.tarjetaCentro 
-                          ? `Sí${selectedSocio.numeroTarjetaCentro ? ` - ${selectedSocio.numeroTarjetaCentro}` : ""}` 
-                          : "No"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3 p-3 rounded-lg border bg-card text-card-foreground shadow-sm">
-                    <User className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs text-muted-foreground font-medium mb-1">Género</p>
-                      <p className="font-semibold text-sm">{selectedSocio.genero || "-"}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </>
   );
 });

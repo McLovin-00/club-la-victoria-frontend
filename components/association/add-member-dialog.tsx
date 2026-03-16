@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogTrigger as DialogTriggerWrapper,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
@@ -20,6 +21,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { useSociosDisponiblesTemporada } from "@/hooks/api/temporadas/useSociosDisponiblesTemporada";
+import { PAGINACION } from "@/lib/constants";
 
 interface AddMemberDialogProps {
   onAddMember: (memberId: string) => void;
@@ -46,6 +48,8 @@ export function AddMemberDialog({
     page,
     totalPages,
     total,
+    limit,
+    handleLimitChange,
   } = useSociosDisponiblesTemporada(temporadaId);
 
   const sociosData = socios || [];
@@ -186,35 +190,52 @@ export function AddMemberDialog({
           </div>
 
           {/* Pagination */}
-          {totalPages > 1 && socios.length > 0 && (
+          {(totalPages > 1 || socios.length > 0) && (
             <div className="p-4 border-t">
-              <div className="flex flex-col text-center items-center justify-between">
-                <p className="text-sm text-muted-foreground mb-4">
-                  Mostrando {socios.length} de {total} socios
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={prevPage}
-                    disabled={page === 1}
+              <div className="flex flex-col sm:flex-row text-center sm:items-center sm:justify-between gap-3">
+                {/* Selector de tamaño */}
+                <div className="flex items-center gap-2 justify-center sm:justify-start">
+                  <span className="text-sm text-muted-foreground">Mostrar</span>
+                  <select
+                    className="h-8 px-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    value={limit}
+                    onChange={(e) => handleLimitChange(Number(e.target.value))}
                   >
-                    <span className="hidden sm:block">Anterior</span>
-                    <ArrowLeft className="w-4 h-4 sm:hidden" />
-                  </Button>
-                  <span className="text-sm text-muted-foreground text-wrap text-center">
-                    Página {page}/{totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={nextPage}
-                    disabled={page === totalPages}
-                  >
-                    <span className="hidden sm:block">Siguiente</span>
-                    <ArrowRight className="w-4 h-4 sm:hidden" />
-                  </Button>
+                    {PAGINACION.OPCIONES_TAMAÑO_PAGINA.map((size) => (
+                      <option key={size} value={size}>
+                        {size}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-sm text-muted-foreground">de {total}</span>
                 </div>
+
+                {/* Navegación de páginas */}
+                {totalPages > 1 && (
+                  <div className="flex items-center gap-2 justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={prevPage}
+                      disabled={page === 1}
+                    >
+                      <span className="hidden sm:block">Anterior</span>
+                      <ArrowLeft className="w-4 h-4 sm:hidden" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground text-wrap text-center">
+                      Página {page}/{totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={nextPage}
+                      disabled={page === totalPages}
+                    >
+                      <span className="hidden sm:block">Siguiente</span>
+                      <ArrowRight className="w-4 h-4 sm:hidden" />
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           )}

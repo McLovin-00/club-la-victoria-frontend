@@ -33,9 +33,8 @@ import { formatDateToISO } from "@/lib/utils/date";
  * Permite filtrar por fecha, refrescar y muestra un resumen junto a la tabla con los registros del día.
  */
 export function StatisticsView() {
-  const initialDate = new Date();
-  const [calendarKey, setCalendarKey] = useState<number>(Date.now());
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(initialDate);
+  const [calendarKey, setCalendarKey] = useState<number>(() => Date.now());
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(() => new Date());
 
   // Estados para filtros
   const [filtroTipoIngreso, setFiltroTipoIngreso] = useState<string>("TODOS");
@@ -203,10 +202,10 @@ export function StatisticsView() {
                   mode="single"
                   selected={selectedDate}
                   onSelect={handleDateChange}
-                  autoFocus
                   locale={es}
                   required={false}
                 />
+
               </PopoverContent>
             </Popover>
 

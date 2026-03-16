@@ -14,6 +14,13 @@ export interface ConfigComisionPayload {
   vigenteDesde: string;
 }
 
+
+export interface ComisionVigente {
+  cobradorId: number;
+  porcentaje: number;
+  vigenteDesde: string | null;
+}
+
 export const useResumenComision = (
   cobradorId: number,
   desde: string,
@@ -42,5 +49,20 @@ export const useConfigurarComision = (cobradorId: number) => {
       );
       return data;
     },
+  });
+};
+
+
+export const useComisionVigente = (cobradorId: number) => {
+  return useQuery<ComisionVigente>({
+    queryKey: ["cobradores", cobradorId, "comision", "vigente"],
+    queryFn: async () => {
+      const { data } = await apiClient.get<ComisionVigente>(
+        `/cobradores/${cobradorId}/comision/vigente`,
+      );
+      return data;
+    },
+    enabled: cobradorId > 0,
+    staleTime: STALE_TIME,
   });
 };

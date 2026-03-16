@@ -16,7 +16,8 @@ import {
 } from "@/components/ui/select";
 import { ResponsiveTable } from "@/components/ui/responsive-table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CheckCircle, ChevronLeft, ChevronFirst, ChevronRight, ChevronLast, Search, X, Calendar } from "lucide-react";
+import { CheckCircle, ChevronLeft, ChevronFirst, ChevronRight, ChevronLast, Search, X, Calendar, User } from "lucide-react";
+import Link from "next/link";
 import { useCuotas, EstadoCuota, type Cuota } from "@/hooks/api/cobros/useCuotas";
 import { useMetodosPago } from "@/hooks/api/cobros/useMetodosPago";
 import { usePagoMultiple } from "@/hooks/api/cobros/usePagoMultiple";
@@ -363,10 +364,19 @@ export default function PagosPage() {
     {
       key: "socio",
       header: "Socio",
-      cell: (cuota: Cuota) =>
-        cuota.socio
-          ? `${cuota.socio.apellido}, ${cuota.socio.nombre}`
-          : `Socio #${cuota.socioId}`,
+      cell: (cuota: Cuota) => (
+        <Link
+          href={`/socios/${cuota.socioId}/cuenta-corriente`}
+          className="inline-flex items-center gap-1.5 hover:text-primary transition-colors group"
+        >
+          <User className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary" />
+          <span>
+            {cuota.socio
+              ? `${cuota.socio.apellido}, ${cuota.socio.nombre}`
+              : `Socio #${cuota.socioId}`}
+          </span>
+        </Link>
+      ),
     },
     {
       key: "dni",
@@ -462,11 +472,15 @@ export default function PagosPage() {
             className="mt-1 h-4 w-4"
           />
           <div>
-            <p className="font-semibold">
+            <Link
+              href={`/socios/${cuota.socioId}/cuenta-corriente`}
+              className="font-semibold inline-flex items-center gap-1.5 hover:text-primary transition-colors"
+            >
+              <User className="h-3.5 w-3.5" />
               {cuota.socio
                 ? `${cuota.socio.apellido}, ${cuota.socio.nombre}`
                 : `Socio #${cuota.socioId}`}
-            </p>
+            </Link>
             <p className="text-sm text-muted-foreground">
               DNI: {cuota.socio?.dni || "-"}
             </p>
@@ -789,7 +803,7 @@ export default function PagosPage() {
                       <Button
                         variant="outline"
                         size="icon"
-                        onClick={() => setPage(page - 1)}
+                        onClick={() => setPage(prev => prev - 1)}
                         disabled={page === 1}
                         title="Página anterior"
                       >
@@ -798,7 +812,7 @@ export default function PagosPage() {
                       <Button
                         variant="outline"
                         size="icon"
-                        onClick={() => setPage(page + 1)}
+                        onClick={() => setPage(prev => prev + 1)}
                         disabled={page === totalPages}
                         title="Página siguiente"
                       >

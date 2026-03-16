@@ -62,6 +62,15 @@ import { cn } from "@/lib/utils";
 
 const formatoMoneda = (monto: number) =>
   new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(monto);
+const normalizarTexto = (texto: string): string => {
+  if (!texto) return "";
+  return texto
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+};
+
 
 const MESES = [
   { valor: "01", nombre: "Enero" },
@@ -110,7 +119,7 @@ export default function GenerarCuotasPage() {
   // Período formateado para el backend
   const periodo = mes && anio ? `${anio}-${mes}` : "";
 
-  const { data, isLoading } = useSociosElegibles(periodo || undefined);
+  const { data, isLoading } = useSociosElegibles(periodo || undefined, busqueda || undefined);
   const generarMutation = useGenerarCuotasSeleccion();
   
   // Hook para verificar si hay cuotas pendientes para el talonario
@@ -146,13 +155,19 @@ export default function GenerarCuotasPage() {
   // Socios filtrados según búsqueda y filtros
   const sociosFiltrados = useMemo(() => {
     return socios.filter((socio) => {
-      // Filtro por búsqueda (nombre, apellido, DNI)
+      // Filtro por búsqueda (nombre, apellido, DNI) con insensitive a acentos
+      const busquedaNormalizada = normalizarTexto(busqueda);
+      const nombreNormalizado = normalizarTexto(socio.nombre);
+      const apellidoNormalizado = normalizarTexto(socio.apellido);
+      const apellidosNombreNormalizado = normalizarTexto(`${socio.apellido}, ${socio.nombre}`);
+      const dniNormalizado = socio.dni ? normalizarTexto(socio.dni) : "";
+
       const coincideBusqueda =
         busqueda === "" ||
-        socio.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        socio.apellido.toLowerCase().includes(busqueda.toLowerCase()) ||
-        socio.dni?.toLowerCase().includes(busqueda.toLowerCase()) ||
-        `${socio.apellido}, ${socio.nombre}`.toLowerCase().includes(busqueda.toLowerCase());
+        nombreNormalizado.includes(busquedaNormalizada) ||
+        apellidoNormalizado.includes(busquedaNormalizada) ||
+        dniNormalizado.includes(busquedaNormalizada) ||
+        apellidosNombreNormalizado.includes(busquedaNormalizada);
 
       // Filtro por estado
       const coincideEstado =
@@ -303,12 +318,12 @@ export default function GenerarCuotasPage() {
     try {
       setDescargandoTarjetaCentro(true);
       await descargarArchivoTarjetaCentro23f(periodo);
-      toast.success("Archivo .23f descargado", {
+      toast.success("Archivo Tarjeta del Centro descargado", {
         description: `Se generó el archivo de Tarjeta del Centro para ${getNombrePeriodo(mes, anio)}.`,
       });
     } catch (error) {
-      const mensaje = error instanceof Error ? error.message : "No fue posible descargar el archivo .23f";
-      toast.error("Error al descargar archivo .23f", {
+      const mensaje = error instanceof Error ? error.message : "No fue posible descargar el archivo Tarjeta del Centro";
+      toast.error("Error al descargar archivo Tarjeta del Centro", {
         description: mensaje,
       });
     } finally {
@@ -487,7 +502,7 @@ export default function GenerarCuotasPage() {
             )}
 
             {sociosConCuotaTarjetaCentro.length > 0 && (
-              <div className="flex flex-col sm:flex-row gap-3 p-4 rounded-xl bg-gradient-to-r from-sky-500/5 via-sky-500/10 to-sky-500/5 border border-sky-500/20">
+              <div className="flex flex-col gap-3 rounded-xl border border-sky-500/20 bg-gradient-to-r from-sky-500/5 via-sky-500/10 to-sky-500/5 p-4 sm:flex-row">
                 <div className="flex-1 flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-500/10">
                     <FileDown className="h-5 w-5 text-sky-600" />
@@ -503,17 +518,17 @@ export default function GenerarCuotasPage() {
                   onClick={handleDescargarTarjetaCentro23f}
                   disabled={descargandoTarjetaCentro}
                   size="lg"
-                  className="bg-sky-600 hover:bg-sky-700 text-white transition-all duration-300"
+                  className="bg-sky-600 text-white transition-all duration-300 hover:bg-sky-700"
                 >
                   {descargandoTarjetaCentro ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                      Generando .23f...
+                      Generando archivo...
                     </>
                   ) : (
                     <>
                       <FileDown className="mr-2 h-5 w-5" />
-                      Descargar Tarjeta Centro (.23f)
+                      Descargar Tarjeta Centro
                     </>
                   )}
                 </Button>

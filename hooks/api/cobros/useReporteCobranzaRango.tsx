@@ -4,6 +4,8 @@ import apiClient from "@/lib/api/client";
 import { STALE_TIME } from "@/lib/constants";
 import { AxiosError } from "axios";
 
+import { DesglosePorMetodoPago, ResumenTarjetaCentro } from "./useReporteCobranza";
+
 export interface ReporteCobranzaMes {
   periodo: string;
   totalGenerado: number;
@@ -25,6 +27,8 @@ export interface ReporteCobranzaRango {
   morosidad: number;
   cantidadMeses: number;
   meses: ReporteCobranzaMes[];
+  desglosePorMetodoPago: DesglosePorMetodoPago[];
+  tarjetaCentro: ResumenTarjetaCentro;
 }
 
 interface UseReporteCobranzaRangoParams {

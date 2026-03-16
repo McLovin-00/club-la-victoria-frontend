@@ -18,13 +18,13 @@ interface SociosElegiblesResponse {
   total: number;
 }
 
-export const useSociosElegibles = (periodo?: string) => {
+export const useSociosElegibles = (periodo?: string, busqueda?: string) => {
   return useQuery<SociosElegiblesResponse>({
-    queryKey: ["socios-elegibles", periodo],
+    queryKey: ["socios-elegibles", periodo, busqueda],
     queryFn: async () => {
       const { data } = await apiClient.get<SociosElegiblesResponse>(
         "/cobros/socios-elegibles",
-        { params: { periodo } }
+        { params: { periodo, busqueda } }
       );
       return data;
     },

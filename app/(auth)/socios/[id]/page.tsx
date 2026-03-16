@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, CalendarDays, ShieldAlert, ShieldCheck, User } from "lucide-react";
+import { ArrowLeft, CalendarDays, CreditCard, ShieldAlert, ShieldCheck, User } from "lucide-react";
 
 import { DashboardLayout } from "@/components/dashboard-layout";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
@@ -41,6 +41,7 @@ export default function MemberDetailPage() {
     socio?.nombreCategoria ??
     "Sin categoría asignada";
   const fechaAlta = formatFechaAlta(socio?.fechaAlta ?? socio?.fechaIngreso);
+  const nroAfiliado = socio?.id ?? String(socioId);
   const overrideManualActivo = Boolean(socio?.overrideManual);
 
   return (
@@ -131,6 +132,11 @@ export default function MemberDetailPage() {
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Nro afiliado</p>
+                  <p className="font-medium">{nroAfiliado}</p>
+                </div>
+
+                <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">Email</p>
                   <p className="font-medium break-all">{socio.email ?? "Sin email"}</p>
                 </div>
@@ -183,6 +189,34 @@ export default function MemberDetailPage() {
                       </Badge>
                     )}
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CreditCard className="h-5 w-5" />
+                  Tarjeta del Centro
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">¿Tiene tarjeta del centro?</p>
+                  <div>
+                    {socio.tarjetaCentro ? (
+                      <Badge className="bg-green-600 text-white">Sí</Badge>
+                    ) : (
+                      <Badge variant="secondary">No</Badge>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-sm text-muted-foreground">Número de tarjeta</p>
+                  <p className="font-medium font-mono">
+                    {socio.numeroTarjetaCentro ?? "Sin número registrado"}
+                  </p>
                 </div>
               </CardContent>
             </Card>

@@ -27,6 +27,7 @@ import {
   CategoriaSocioFiltro,
   EstadoPagosResponse,
   SocioPagosAnual,
+  TarjetaCentroEstadoMes,
   useEstadoPagos,
 } from "@/hooks/api/cobros/useEstadoPagos";
 import { PAGINACION } from "@/lib/constants";
@@ -46,7 +47,7 @@ const meses = [
   { key: "12", label: "Diciembre" },
 ];
 
-const pageSize = PAGINACION.TAMAÑO_PAGINA_POR_DEFECTO;
+const defaultPageSize = PAGINACION.TAMAÑO_PAGINA_POR_DEFECTO;
 
 const filtrosCategoriaSocio: {
   label: string;
@@ -57,13 +58,24 @@ const filtrosCategoriaSocio: {
   { label: "Adherente", value: "ADHERENTE" },
 ];
 
+const filtrosTarjetaCentro: {
+  label: string;
+  value: "TODOS" | "SI" | "NO";
+}[] = [
+  { label: "Todos", value: "TODOS" },
+  { label: "Con tarjeta", value: "SI" },
+  { label: "Sin tarjeta", value: "NO" },
+];
+
 export default function EstadoPagosPage() {
   const currentYear = new Date().getFullYear();
   const [anio, setAnio] = useState(currentYear);
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(defaultPageSize);
   const [busqueda, setBusqueda] = useState("");
   const [busquedaAplicada, setBusquedaAplicada] = useState("");
   const [categoriaSocio, setCategoriaSocio] = useState<"TODOS" | CategoriaSocioFiltro>("TODOS");
+  const [tarjetaCentro, setTarjetaCentro] = useState<"TODOS" | "SI" | "NO">("TODOS");
   const [exportandoExcel, setExportandoExcel] = useState(false);
   const [imprimiendoPlanilla, setImprimiendoPlanilla] = useState(false);
 
@@ -72,8 +84,9 @@ export default function EstadoPagosPage() {
       anio,
       busqueda: busquedaAplicada || undefined,
       categoriaSocio: categoriaSocio === "TODOS" ? undefined : categoriaSocio,
+      tarjetaCentro: tarjetaCentro === "TODOS" ? undefined : tarjetaCentro === "SI",
     }),
-    [anio, busquedaAplicada, categoriaSocio],
+    [anio, busquedaAplicada, categoriaSocio, tarjetaCentro],
   );
 
   const filtros = useMemo(
@@ -82,7 +95,7 @@ export default function EstadoPagosPage() {
       page,
       limit: pageSize,
     }),
-    [filtrosBase, page],
+    [filtrosBase, page, pageSize],
   );
 
   const { data, isLoading } = useEstadoPagos(filtros);
@@ -102,6 +115,14 @@ export default function EstadoPagosPage() {
   const handleBusquedaAplicada = () => {
     setBusquedaAplicada(busqueda.trim());
     setPage(1);
+  };
+
+  const handlePageSizeChange = (value: string) => {
+    const newSize = Number.parseInt(value, 10);
+    if (!Number.isNaN(newSize)) {
+      setPageSize(newSize);
+      setPage(1);
+    }
   };
 
   const limpiarBusqueda = () => {
@@ -294,7 +315,59 @@ export default function EstadoPagosPage() {
     }
   };
 
-  const renderEstadoMes = (estado: string | null) => {
+  const renderEstadoTarjetaCentroMes = (
+    estadoTarjeta: TarjetaCentroEstadoMes,
+  ) => {
+    if (estadoTarjeta === "TARJETA_RECHAZADA_PAGADA") {
+      return (
+        <div className="flex flex-col items-center gap-1">
+          <span className="inline-flex items-center justify-center rounded-md bg-red-100 px-2 py-1 text-[10px] font-semibold text-red-700">
+            Tarjeta rechazada
+          </span>
+          <span className="inline-flex items-center justify-center rounded-md bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+            Pagado
+          </span>
+        </div>
+      );
+    }
+
+    if (estadoTarjeta === "TARJETA_RECHAZADA_PENDIENTE") {
+      return (
+        <div className="flex flex-col items-center gap-1">
+          <span className="inline-flex items-center justify-center rounded-md bg-red-100 px-2 py-1 text-[10px] font-semibold text-red-700">
+            Tarjeta rechazada
+          </span>
+          <span className="inline-flex items-center justify-center rounded-md bg-blue-100 px-2 py-1 text-[10px] font-semibold text-blue-700">
+            Pendiente
+          </span>
+        </div>
+      );
+    }
+
+    if (estadoTarjeta === "TARJETA_APROBADA") {
+      return (
+        <span className="inline-flex items-center justify-center rounded-md bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+          Tarjeta aprobada
+        </span>
+      );
+    }
+
+    return (
+      <span className="inline-flex items-center justify-center rounded-md bg-blue-100 px-2 py-1 text-[10px] font-semibold text-blue-700">
+        Tarjeta pendiente
+      </span>
+    );
+  };
+
+  const renderEstadoMes = (
+    estado: string | null,
+    estadoTarjeta: TarjetaCentroEstadoMes | null,
+    tieneTarjetaCentro: boolean,
+  ) => {
+    if (tieneTarjetaCentro && estadoTarjeta) {
+      return renderEstadoTarjetaCentroMes(estadoTarjeta);
+    }
+
     if (estado === "PAGADA") {
       return <span className="text-lg font-semibold leading-none text-emerald-600">✓</span>;
     }
@@ -322,12 +395,12 @@ export default function EstadoPagosPage() {
               <CalendarCheck className="h-5 w-5" />
               Estado anual de pagos
             </CardTitle>
-          <CardDescription>
+            <CardDescription>
               Consulte de forma consolidada qué meses están pagados, pendientes o sin cuota generada.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-3 md:grid-cols-4">
+            <div className="grid gap-3 md:grid-cols-5">
               <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="busqueda">Buscar socio</Label>
                 <div className="flex gap-2">
@@ -388,6 +461,28 @@ export default function EstadoPagosPage() {
                 </Select>
               </div>
 
+              <div className="space-y-2">
+                <Label>Tarjeta Centro</Label>
+                <Select
+                  value={tarjetaCentro}
+                  onValueChange={(value) => {
+                    setTarjetaCentro(value as "TODOS" | "SI" | "NO");
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filtrosTarjetaCentro.map((filtro) => (
+                      <SelectItem key={filtro.value} value={filtro.value}>
+                        {filtro.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
             </div>
           </CardContent>
         </Card>
@@ -438,7 +533,7 @@ export default function EstadoPagosPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="min-w-[220px]">Socio</TableHead>
-                        <TableHead className="min-w-[140px]">Categoría</TableHead>
+                        <TableHead className="min-w-[100px]">Tarjeta Centro</TableHead>
                         {meses.map((mes) => (
                           <TableHead key={mes.key} className="text-center">
                             {mes.label}
@@ -452,10 +547,20 @@ export default function EstadoPagosPage() {
                           <TableCell className="font-medium">
                             {socio.apellido}, {socio.nombre}
                           </TableCell>
-                          <TableCell>{socio.categoriaNombre}</TableCell>
+                          <TableCell>
+                            {socio.tarjetaCentro ? (
+                              <span className="text-emerald-600 font-medium">Sí</span>
+                            ) : (
+                              <span className="text-muted-foreground">No</span>
+                            )}
+                          </TableCell>
                           {meses.map((mes) => (
                             <TableCell key={`${socio.socioId}-${mes.key}`} className="text-center">
-                              {renderEstadoMes(socio.meses[mes.key] ?? null)}
+                              {renderEstadoMes(
+                                socio.meses[mes.key] ?? null,
+                                socio.mesesTarjetaCentro?.[mes.key] ?? null,
+                                socio.tarjetaCentro,
+                              )}
                             </TableCell>
                           ))}
                         </TableRow>
@@ -471,9 +576,29 @@ export default function EstadoPagosPage() {
                 )}
 
                 <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Página {currentPage} de {totalPages}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">
+                      Página {currentPage} de {totalPages}
+                    </span>
+                    <div className="flex items-center gap-2 ml-4">
+                      <span className="whitespace-nowrap text-xs text-muted-foreground">Mostrar:</span>
+                      <Select
+                        value={pageSize.toString()}
+                        onValueChange={handlePageSizeChange}
+                      >
+                        <SelectTrigger className="h-8 w-20 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAGINACION.OPCIONES_TAMAÑO_PAGINA.map((size) => (
+                            <SelectItem key={size} value={size.toString()}>
+                              {size}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                   <div className="flex items-center gap-2">
                     <Button
                       variant="outline"

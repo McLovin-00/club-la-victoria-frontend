@@ -4,6 +4,20 @@ import apiClient from "@/lib/api/client";
 import { STALE_TIME } from "@/lib/constants";
 import { AxiosError } from "axios";
 
+export interface DesglosePorMetodoPago {
+  metodoPago: string;
+  totalCobrado: number;
+  cantidadPagos: number;
+}
+
+export interface ResumenTarjetaCentro {
+  sociosConTarjeta: number;
+  cuotasPagadasTarjeta: number;
+  totalCobradoTarjeta: number;
+  cuotasPendientesTarjeta: number;
+  totalPendienteTarjeta: number;
+}
+
 export interface ReporteCobranza {
   periodo: string;
   totalGenerado: number;
@@ -12,6 +26,8 @@ export interface ReporteCobranza {
   cuotasPendientes: number;
   cuotasPagadas: number;
   morosidad: number;
+  desglosePorMetodoPago: DesglosePorMetodoPago[];
+  tarjetaCentro: ResumenTarjetaCentro;
 }
 
 // Valores por defecto cuando no hay cuotas pendientes
@@ -23,6 +39,14 @@ const defaultReporteCobranza: ReporteCobranza = {
   cuotasPendientes: 0,
   cuotasPagadas: 0,
   morosidad: 0,
+  desglosePorMetodoPago: [],
+  tarjetaCentro: {
+    sociosConTarjeta: 0,
+    cuotasPagadasTarjeta: 0,
+    totalCobradoTarjeta: 0,
+    cuotasPendientesTarjeta: 0,
+    totalPendienteTarjeta: 0,
+  },
 };
 
 export const useReporteCobranza = (periodo: string) => {

@@ -23,7 +23,23 @@ import {
   Calendar,
   CalendarRange,
   Loader2,
+  Banknote,
+  ArrowLeftRight,
+  CreditCard,
 } from "lucide-react";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 import { useReporteCobranza } from "@/hooks/api/cobros/useReporteCobranza";
 import { useReporteCobranzaRango } from "@/hooks/api/cobros/useReporteCobranzaRango";
 import { MonthRangePicker } from "@/components/cobros/MonthRangePicker";
@@ -280,6 +296,117 @@ export default function ReportesPage() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Gráfico de donut animado - Estado de cobranza */}
+                  <div className="mt-6 p-4 rounded-lg border bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-4">
+                      Estado de Cobranza
+                    </p>
+                    <div className="flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height={200}>
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: "Cobrado", value: reporte.totalCobrado, color: "#22c55e" },
+                              { name: "Pendiente", value: reporte.totalGenerado - reporte.totalCobrado, color: "#f97316" },
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={80}
+                            paddingAngle={5}
+                            dataKey="value"
+                            animationBegin={0}
+                            animationDuration={800}
+                            animationEasing="ease-out"
+                          >
+                            {[
+                              { name: "Cobrado", value: reporte.totalCobrado, color: "#22c55e" },
+                              { name: "Pendiente", value: reporte.totalGenerado - reporte.totalCobrado, color: "#f97316" },
+                            ].map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip
+                            formatter={(value: number) => formatMonto(value)}
+                            contentStyle={{
+                              backgroundColor: "rgba(255,255,255,0.95)",
+                              border: "1px solid #e2e8f0",
+                              borderRadius: "8px",
+                              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                            }}
+                          />
+                          <Legend
+                            verticalAlign="bottom"
+                            height={36}
+                            formatter={(value) => (
+                              <span className="text-sm text-slate-600 dark:text-slate-300">{value}</span>
+                            )}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  {/* Desglose por Método de Pago */}
+                  {reporte.desglosePorMetodoPago && reporte.desglosePorMetodoPago.length > 0 && (
+                    <div className="mt-6 p-4 rounded-lg border">
+                      <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-4">
+                        Desglose por Método de Pago
+                      </p>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {reporte.desglosePorMetodoPago.map((metodo) => (
+                          <div
+                            key={metodo.metodoPago}
+                            className="flex items-center justify-between rounded-lg border bg-gradient-to-r from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 p-3"
+                          >
+                            <div className="flex items-center gap-2">
+                              {metodo.metodoPago.toLowerCase().includes("transferencia") ? (
+                                <ArrowLeftRight className="h-4 w-4 text-indigo-600" />
+                              ) : (
+                                <Banknote className="h-4 w-4 text-emerald-600" />
+                              )}
+                              <div>
+                                <p className="text-sm font-medium">{metodo.metodoPago}</p>
+                                <p className="text-xs text-muted-foreground">{metodo.cantidadPagos} pagos</p>
+                              </div>
+                            </div>
+                            <p className="text-sm font-bold text-green-700">{formatMonto(metodo.totalCobrado)}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Resumen Tarjeta del Centro */}
+                  {reporte.tarjetaCentro && reporte.tarjetaCentro.sociosConTarjeta > 0 && (
+                    <div className="mt-6 p-4 rounded-lg border border-cyan-200 bg-gradient-to-br from-cyan-50 to-sky-50 dark:from-cyan-950 dark:to-sky-950">
+                      <div className="flex items-center gap-2 mb-4">
+                        <CreditCard className="h-5 w-5 text-cyan-600" />
+                        <p className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
+                          Tarjeta del Centro
+                        </p>
+                      </div>
+                      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                        <div className="p-3 rounded-lg bg-white/70 dark:bg-slate-800/70 border">
+                          <p className="text-xs text-muted-foreground">Socios con Tarjeta</p>
+                          <p className="text-lg font-bold text-cyan-700">{reporte.tarjetaCentro.sociosConTarjeta}</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-white/70 dark:bg-slate-800/70 border">
+                          <p className="text-xs text-muted-foreground">Cuotas Pagadas</p>
+                          <p className="text-lg font-bold text-green-600">{reporte.tarjetaCentro.cuotasPagadasTarjeta}</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-white/70 dark:bg-slate-800/70 border">
+                          <p className="text-xs text-muted-foreground">Total Cobrado</p>
+                          <p className="text-lg font-bold text-green-700">{formatMonto(reporte.tarjetaCentro.totalCobradoTarjeta)}</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-white/70 dark:bg-slate-800/70 border">
+                          <p className="text-xs text-muted-foreground">Pendiente</p>
+                          <p className="text-lg font-bold text-orange-600">{formatMonto(reporte.tarjetaCentro.totalPendienteTarjeta)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -383,6 +510,186 @@ export default function ReportesPage() {
                         </p>
                       </div>
                     </div>
+
+                    {/* Gráfico de donut animado - Resumen consolidado */}
+                    <div className="mt-6 p-4 rounded-lg border bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+                      <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-4">
+                        Resumen Consolidado
+                      </p>
+                      <div className="flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height={220}>
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { name: "Cobrado", value: reporteRango.totalCobrado, color: "#22c55e" },
+                                { name: "Pendiente", value: reporteRango.totalGenerado - reporteRango.totalCobrado, color: "#f97316" },
+                              ]}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={70}
+                              outerRadius={90}
+                              paddingAngle={5}
+                              dataKey="value"
+                              animationBegin={0}
+                              animationDuration={800}
+                              animationEasing="ease-out"
+                            >
+                              {[
+                                { name: "Cobrado", value: reporteRango.totalCobrado, color: "#22c55e" },
+                                { name: "Pendiente", value: reporteRango.totalGenerado - reporteRango.totalCobrado, color: "#f97316" },
+                              ].map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              formatter={(value: number) => formatMonto(value)}
+                              contentStyle={{
+                                backgroundColor: "rgba(255,255,255,0.95)",
+                                border: "1px solid #e2e8f0",
+                                borderRadius: "8px",
+                                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                              }}
+                            />
+                            <Legend
+                              verticalAlign="bottom"
+                              height={36}
+                              formatter={(value) => (
+                                <span className="text-sm text-slate-600 dark:text-slate-300">{value}</span>
+                              )}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+
+                    {/* Desglose por Método de Pago */}
+                    {reporteRango.desglosePorMetodoPago && reporteRango.desglosePorMetodoPago.length > 0 && (
+                      <div className="mt-6 p-4 rounded-lg border">
+                        <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-4">
+                          Desglose por Método de Pago (Consolidado)
+                        </p>
+                        <div className="grid gap-3 md:grid-cols-2">
+                          {reporteRango.desglosePorMetodoPago.map((metodo) => (
+                            <div
+                              key={metodo.metodoPago}
+                              className="flex items-center justify-between rounded-lg border bg-gradient-to-r from-slate-50 to-white dark:from-slate-900 dark:to-slate-800 p-3"
+                            >
+                              <div className="flex items-center gap-2">
+                                {metodo.metodoPago.toLowerCase().includes("transferencia") ? (
+                                  <ArrowLeftRight className="h-4 w-4 text-indigo-600" />
+                                ) : (
+                                  <Banknote className="h-4 w-4 text-emerald-600" />
+                                )}
+                                <div>
+                                  <p className="text-sm font-medium">{metodo.metodoPago}</p>
+                                  <p className="text-xs text-muted-foreground">{metodo.cantidadPagos} pagos</p>
+                                </div>
+                              </div>
+                              <p className="text-sm font-bold text-green-700">{formatMonto(metodo.totalCobrado)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Resumen Tarjeta del Centro */}
+                    {reporteRango.tarjetaCentro && reporteRango.tarjetaCentro.sociosConTarjeta > 0 && (
+                      <div className="mt-6 p-4 rounded-lg border border-cyan-200 bg-gradient-to-br from-cyan-50 to-sky-50 dark:from-cyan-950 dark:to-sky-950">
+                        <div className="flex items-center gap-2 mb-4">
+                          <CreditCard className="h-5 w-5 text-cyan-600" />
+                          <p className="text-sm font-medium text-cyan-700 dark:text-cyan-300">
+                            Tarjeta del Centro (Consolidado)
+                          </p>
+                        </div>
+                        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+                          <div className="p-3 rounded-lg bg-white/70 dark:bg-slate-800/70 border">
+                            <p className="text-xs text-muted-foreground">Socios con Tarjeta</p>
+                            <p className="text-lg font-bold text-cyan-700">{reporteRango.tarjetaCentro.sociosConTarjeta}</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-white/70 dark:bg-slate-800/70 border">
+                            <p className="text-xs text-muted-foreground">Cuotas Pagadas</p>
+                            <p className="text-lg font-bold text-green-600">{reporteRango.tarjetaCentro.cuotasPagadasTarjeta}</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-white/70 dark:bg-slate-800/70 border">
+                            <p className="text-xs text-muted-foreground">Total Cobrado</p>
+                            <p className="text-lg font-bold text-green-700">{formatMonto(reporteRango.tarjetaCentro.totalCobradoTarjeta)}</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-white/70 dark:bg-slate-800/70 border">
+                            <p className="text-xs text-muted-foreground">Pendiente</p>
+                            <p className="text-lg font-bold text-orange-600">{formatMonto(reporteRango.tarjetaCentro.totalPendienteTarjeta)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Gráfico de barras animado - Tendencias mensuales */}
+                <Card className="mt-6">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5" />
+                      Tendencia de Cobranza por Mes
+                    </CardTitle>
+                    <CardDescription>
+                      Evolución del total generado vs cobrado en el rango de meses
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <BarChart
+                        data={reporteRango.meses.map((mes) => ({
+                          periodo: getNombreMes(mes.periodo).split(" ")[0].slice(0, 3),
+                          Generado: mes.totalGenerado,
+                          Cobrado: mes.totalCobrado,
+                        }))}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                        <XAxis
+                          dataKey="periodo"
+                          tick={{ fontSize: 12, fill: "#64748b" }}
+                          axisLine={{ stroke: "#e2e8f0" }}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 12, fill: "#64748b" }}
+                          axisLine={{ stroke: "#e2e8f0" }}
+                          tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                        />
+                        <Tooltip
+                          formatter={(value: number) => formatMonto(value)}
+                          contentStyle={{
+                            backgroundColor: "rgba(255,255,255,0.95)",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "8px",
+                            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                          }}
+                          labelStyle={{ fontWeight: 600, color: "#1e293b" }}
+                        />
+                        <Legend
+                          wrapperStyle={{ paddingTop: "20px" }}
+                          formatter={(value) => (
+                            <span className="text-sm font-medium text-slate-600">{value}</span>
+                          )}
+                        />
+                        <Bar
+                          dataKey="Generado"
+                          fill="#3b82f6"
+                          radius={[4, 4, 0, 0]}
+                          animationBegin={0}
+                          animationDuration={800}
+                          animationEasing="ease-out"
+                        />
+                        <Bar
+                          dataKey="Cobrado"
+                          fill="#22c55e"
+                          radius={[4, 4, 0, 0]}
+                          animationBegin={200}
+                          animationDuration={800}
+                          animationEasing="ease-out"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
                   </CardContent>
                 </Card>
 

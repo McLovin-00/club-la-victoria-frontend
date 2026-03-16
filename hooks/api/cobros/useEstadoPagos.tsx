@@ -2,6 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/api/client";
 import { STALE_TIME } from "@/lib/constants";
 
+export type TarjetaCentroEstadoMes =
+  | "TARJETA_APROBADA"
+  | "TARJETA_RECHAZADA_PENDIENTE"
+  | "TARJETA_RECHAZADA_PAGADA"
+  | "TARJETA_PENDIENTE_RESPUESTA";
+
 export interface SocioPagosAnual {
   socioId: number;
   nombre: string;
@@ -9,7 +15,9 @@ export interface SocioPagosAnual {
   dni?: string;
   estado: "ACTIVO" | "INACTIVO" | "MOROSO";
   categoriaNombre: string;
+  tarjetaCentro: boolean;
   meses: Record<string, string | null>;
+  mesesTarjetaCentro?: Record<string, TarjetaCentroEstadoMes | null>;
 }
 
 export type EstadoPagoFiltro =
@@ -38,6 +46,7 @@ interface EstadoPagosParams {
   mes?: number;
   estadoPago?: EstadoPagoFiltro;
   categoriaSocio?: CategoriaSocioFiltro;
+  tarjetaCentro?: boolean;
 }
 
 export const useEstadoPagos = (params: EstadoPagosParams) => {

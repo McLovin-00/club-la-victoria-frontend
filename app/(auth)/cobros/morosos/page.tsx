@@ -8,6 +8,7 @@ import { MorososStats, MorososFilters, MorososTable } from "@/components/morosos
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Loader2, AlertTriangle, RefreshCw } from "lucide-react"
+import { PAGINACION } from "@/lib/constants"
 
 export default function MorososPage() {
   const router = useRouter()
@@ -18,12 +19,17 @@ export default function MorososPage() {
     (searchParams.get("severidad") as SeveridadMoroso) || "todos"
   )
   const [busqueda, setBusqueda] = useState(searchParams.get("busqueda") || "")
+  const [limit, setLimit] = useState<number>(PAGINACION.TAMAÑO_PAGINA_POR_DEFECTO)
 
   const { data, isLoading, isError, error, refetch } = useMorososDetallados({
     severidad: severidad === "todos" ? undefined : severidad,
     busqueda: busqueda || undefined,
-    limit: 100,
+    limit,
   })
+
+  const handleLimitChange = (newLimit: number) => {
+    setLimit(newLimit);
+  };
 
   // Sync URL params
   useEffect(() => {
@@ -111,9 +117,28 @@ export default function MorososPage() {
         {data?.morosos && <MorososTable morosos={data.morosos} />}
 
         {/* Pagination info */}
-        {data && data.totalPages > 1 && (
-          <div className="text-center text-sm text-muted-foreground">
-            Mostrando {data.morosos.length} de {data.total} morosos - Pagina {data.page} de {data.totalPages}
+        {data && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <span>Mostrar</span>
+              <select
+                className="h-8 px-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                value={limit}
+                onChange={(e) => handleLimitChange(Number(e.target.value))}
+              >
+                {PAGINACION.OPCIONES_TAMAÑO_PAGINA.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+              <span>de {data.total} morosos</span>
+            </div>
+            {data.totalPages > 1 && (
+              <div>
+                Página {data.page} de {data.totalPages}
+              </div>
+            )}
           </div>
         )}
       </div>
