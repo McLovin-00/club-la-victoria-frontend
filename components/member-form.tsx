@@ -215,6 +215,9 @@ export function MemberForm({
       ...data,
       overrideManual,
       categoriaId: overrideManual ? data.categoriaId : undefined,
+      numeroTarjetaCentro: data.tarjetaCentro
+        ? data.numeroTarjetaCentro?.replace(/\D/g, "")
+        : undefined,
     };
     onSubmit(finalData);
   };
@@ -451,12 +454,16 @@ export function MemberForm({
               <Input
                 id="numeroTarjetaCentro"
                 {...register("numeroTarjetaCentro")}
-                placeholder="TC-12345"
-                maxLength={20}
+                placeholder="1234567890123456"
+                inputMode="numeric"
+                maxLength={16}
                 aria-invalid={!!errors.numeroTarjetaCentro}
                 aria-describedby={errors.numeroTarjetaCentro ? "numeroTarjetaCentro-error" : undefined}
                 disabled={isSubmitting}
               />
+              <p className="text-xs text-muted-foreground">
+                Ingresá los 16 digitos de la tarjeta, sin espacios ni guiones.
+              </p>
               {errors.numeroTarjetaCentro && (
                 <p id="numeroTarjetaCentro-error" className="text-xs text-destructive mt-1">
                   {errors.numeroTarjetaCentro.message}

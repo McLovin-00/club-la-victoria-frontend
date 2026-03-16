@@ -5,6 +5,16 @@
 import { z } from "zod";
 import { VALIDACION, MENSAJES_ERROR, GENERO, ESTADO_SOCIO } from "@/lib/constants";
 
+const NUMERO_TARJETA_CENTRO_REGEX = /^\d{16}$/;
+const MENSAJE_TARJETA_CENTRO_INVALIDA =
+  "El numero de tarjeta del centro debe tener exactamente 16 digitos.";
+
+const normalizarNumeroTarjetaCentro = (valor?: string) => {
+  if (!valor || valor.trim() === "") return undefined;
+  const tarjetaNormalizada = valor.replace(/\D/g, "");
+  return tarjetaNormalizada === "" ? undefined : tarjetaNormalizada;
+};
+
 const socioBaseSchema = z.object({
   // DNI - requerido, exactamente 8 dígitos
   dni: z
@@ -134,7 +144,10 @@ const socioBaseSchema = z.object({
   tarjetaCentro: z.boolean().optional(),
 
   // Número de tarjeta del centro - opcional, requerido si tarjetaCentro es true
-  numeroTarjetaCentro: z.string().optional(),
+  numeroTarjetaCentro: z
+    .string()
+    .optional()
+    .transform((val) => normalizarNumeroTarjetaCentro(val)),
 });
 
 const validarCategoriaOverride = (
@@ -159,6 +172,19 @@ const validarTarjetaCentro = (
       code: z.ZodIssueCode.custom,
       path: ["numeroTarjetaCentro"],
       message: MENSAJES_ERROR.CAMPO_REQUERIDO,
+    });
+    return;
+  }
+
+  if (
+    data.tarjetaCentro &&
+    data.numeroTarjetaCentro &&
+    !NUMERO_TARJETA_CENTRO_REGEX.test(data.numeroTarjetaCentro)
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["numeroTarjetaCentro"],
+      message: MENSAJE_TARJETA_CENTRO_INVALIDA,
     });
   }
 };
