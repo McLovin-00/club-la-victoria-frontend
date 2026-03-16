@@ -4,13 +4,13 @@ const usuarioAdmin = process.env.E2E_USER ?? "admin";
 const passwordAdmin = process.env.E2E_PASS ?? "admin";
 
 export const iniciarSesion = async (page: Page): Promise<void> => {
-  await page.goto("/login");
-  await page.locator('input[autocomplete="username"]').fill(usuarioAdmin);
-  await page.locator('input[autocomplete="current-password"]').fill(passwordAdmin);
-
   const maxIntentos = 3;
 
   for (let intento = 1; intento <= maxIntentos; intento += 1) {
+    await page.goto("/login");
+    await page.locator('input[autocomplete="username"]').fill(usuarioAdmin);
+    await page.locator('input[autocomplete="current-password"]').fill(passwordAdmin);
+
     const loginAttempt = Promise.race([
       page
         .waitForResponse((response) => response.url().includes("/auth/login"), {
@@ -28,8 +28,14 @@ export const iniciarSesion = async (page: Page): Promise<void> => {
     await page.getByRole("button", { name: /Iniciar sesion/i }).click();
     const loginResult = await loginAttempt;
 
+    // Si la solicitud fallo a nivel de red, reintentar tras espera
     if (loginResult.kind === "requestfailed") {
       const detalle = loginResult.request.failure()?.errorText ?? "error desconocido";
+      if (intento < maxIntentos) {
+        // Esperar antes de reintentar (puede ser rate limit o transitorio)
+        await page.waitForTimeout(10000);
+        continue;
+      }
       throw new Error(`La solicitud de login fallo antes de responder: ${detalle}`);
     }
 
@@ -53,6 +59,8 @@ export const iniciarSesion = async (page: Page): Promise<void> => {
 };
 
 export const cerrarSesion = async (page: Page): Promise<void> => {
-  await page.getByRole("button", { name: /Cerrar/i }).click();
+  // Buscar boton de cerrar sesion (puede ser texto completo o icono)
+  const botonCerrar = page.getByRole("button", { name: /Cerrar/i });
+  await botonCerrar.click();
   await expect(page).toHaveURL(/\/login$/);
 };
