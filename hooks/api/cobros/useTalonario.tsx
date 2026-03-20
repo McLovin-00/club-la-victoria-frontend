@@ -90,13 +90,43 @@ export const abrirReciboMultipleHtml = async (
   }
 };
 
+const TARJETA_CENTRO_MONTH_LETTER_MAP: Record<string, string> = {
+  "01": "e",
+  "02": "f",
+  "03": "m",
+  "04": "b",
+  "05": "y",
+  "06": "j",
+  "07": "l",
+  "08": "a",
+  "09": "s",
+  "10": "o",
+  "11": "n",
+  "12": "d",
+};
+
+const generarNombreTarjetaCentroFallback = (): string => {
+  const partesFecha = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    day: "2-digit",
+    month: "2-digit",
+  }).formatToParts(new Date());
+
+  const dia = partesFecha.find((parte) => parte.type === "day")?.value ?? "01";
+  const mes = partesFecha.find((parte) => parte.type === "month")?.value ?? "01";
+  const letraMes = TARJETA_CENTRO_MONTH_LETTER_MAP[mes] ?? "e";
+
+  return `C0019094.${dia}${letraMes}`;
+};
+
 const extraerNombreArchivo = (contentDisposition: string | null): string => {
+  const fallback = generarNombreTarjetaCentroFallback();
   if (!contentDisposition) {
-    return 'tarjeta-centro.23f';
+    return fallback;
   }
 
   const match = contentDisposition.match(/filename="?([^";]+)"?/i);
-  return match?.[1] ?? 'tarjeta-centro.23f';
+  return match?.[1] ?? fallback;
 };
 
 export const descargarArchivoTarjetaCentro23f = async (periodo: string) => {
