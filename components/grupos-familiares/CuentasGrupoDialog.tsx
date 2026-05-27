@@ -29,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Loader2, RefreshCw, TrendingDown, TrendingUp, Users, Eye, AlertCircle } from 'lucide-react';
+import { Loader2, RefreshCw, TrendingDown, TrendingUp, Users, Eye, AlertCircle, CreditCard } from 'lucide-react';
 
 import { useCuentasGrupoFamiliar } from '@/hooks/api/cobros/useCuentasGrupoFamiliar';
 
@@ -143,7 +143,7 @@ export function CuentasGrupoDialog({
             </div>
           ) : (
             <>
-              <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <Card className="min-w-0 border-l-4 border-l-status-success">
                   <CardContent className="pt-6">
                     <div className="flex min-w-0 items-center gap-4">
@@ -189,6 +189,26 @@ export function CuentasGrupoDialog({
                     </div>
                   </CardContent>
                 </Card>
+                {typeof cuentas?.creditoGrupal === 'number' && cuentas.creditoGrupal > 0 && (
+                  <Card className="min-w-0 border-l-4 border-l-blue-500 sm:col-span-2 xl:col-span-2">
+                    <CardContent className="pt-6">
+                      <div className="flex min-w-0 items-center gap-4">
+                        <div className="rounded-lg bg-blue-100 p-2">
+                          <CreditCard className="h-6 w-6 text-blue-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm text-muted-foreground">Crédito grupal a favor</p>
+                          <p className="text-xl font-bold text-blue-600 sm:text-2xl">
+                            {formatCurrency(cuentas.creditoGrupal)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Se aplica automáticamente en cobros grupales
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
               <div className="mt-6">
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -38,9 +38,14 @@ export const usePagoCuotasSeleccionadas = () => {
       );
       return data;
     },
-    onSuccess: (result) => {
+    onSuccess: (result, variables) => {
+      const totalCobrado = variables.pagos.reduce(
+        (acc, pago) => acc + Number(pago.monto),
+        0,
+      );
+
       toast.success("Pago masivo registrado", {
-        description: `${result.cuotasPagadas} cuotas pagadas por $${Math.round(result.totalPagado)}`,
+        description: `${result.cuotasPagadas} cuotas pagadas por $${Math.round(totalCobrado)}`,
       });
 
       queryClient.invalidateQueries({ queryKey: ["cuenta-corriente"] });

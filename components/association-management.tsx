@@ -27,6 +27,7 @@ import { SeasonStatusAlert } from "@/components/association/season-status-alert"
 import { SeasonMemberList } from "@/components/association/season-member-list";
 import { AddMemberDialog } from "@/components/association/add-member-dialog";
 import { formatDateShort, isDateRangeActive, isDatePast } from "@/lib/utils/date";
+import { matchesMultiWordSearch } from "@/lib/utils/search";
 
 export function AssociationManagement() {
   // Estados para selección de temporada
@@ -134,16 +135,9 @@ export function AssociationManagement() {
       let socios = sociosTemporada;
       
       if (searchTerm.trim()) {
-        const busquedaLower = searchTerm.toLowerCase();
         socios = socios.filter((socio) => {
-          return (
-            `${socio.socio.nombre} ${socio.socio.apellido}`
-              .toLowerCase()
-              .includes(busquedaLower) ||
-            socio.socio.dni.toLowerCase().includes(busquedaLower) ||
-            (socio.socio.email &&
-              socio.socio.email.toLowerCase().includes(busquedaLower))
-          );
+          const searchText = `${socio.socio.nombre} ${socio.socio.apellido} ${socio.socio.dni} ${socio.socio.email || ''}`;
+          return matchesMultiWordSearch(searchText, searchTerm);
         });
       }
       

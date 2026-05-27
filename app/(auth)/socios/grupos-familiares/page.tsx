@@ -67,6 +67,7 @@ import {
 } from "@/hooks/api/cobros/useGruposFamiliares";
 import { CuentasGrupoDialog } from "@/components/grupos-familiares/CuentasGrupoDialog";
 import { toast } from "sonner";
+import { matchesMultiWordSearch } from "@/lib/utils/search";
 
 export default function GruposFamiliaresPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -100,12 +101,8 @@ export default function GruposFamiliaresPage() {
   // Filtered socios for assign dialog
   const filteredSocios = sociosSinGrupo?.filter((socio) => {
     if (!searchSocio) return true;
-    const search = searchSocio.toLowerCase();
-    return (
-      socio.nombre.toLowerCase().includes(search) ||
-      socio.apellido.toLowerCase().includes(search) ||
-      socio.dni?.toLowerCase().includes(search)
-    );
+    const searchText = `${socio.nombre} ${socio.apellido} ${socio.dni || ''}`;
+    return matchesMultiWordSearch(searchText, searchSocio);
   });
 
   // Handlers

@@ -25,6 +25,8 @@ export interface CuentaCorriente {
   totalDeuda: number;
   totalPagado: number;
   mesesAdeudados: number;
+  /** Crédito individual disponible del socio, calculado por el backend */
+  creditoIndividual?: number;
 }
 
 export const useCuentaCorriente = (socioId: number, anio?: number) => {

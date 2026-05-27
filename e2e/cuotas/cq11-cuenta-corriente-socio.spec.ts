@@ -497,6 +497,65 @@ test.describe.serial("CQ11 - Cuenta corriente de socio", () => {
     }
   });
 
+  // CQ11-13: Verificar que se muestra el crédito individual cuando existe
+  test("CQ11-13: mostrar credito individual en cuenta corriente", async ({ page }) => {
+    expect(socioCreado).toBeDefined();
+    expect(socioCreado.socioId).toBeTruthy();
+    await iniciarSesion(page);
+
+    await page.goto(`/socios/${socioCreado.socioId}/cuenta-corriente`);
+    await expect(page.getByText(/^Cuenta Corriente$/).first()).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Buscar la tarjeta de crédito individual (puede o no existir según el socio)
+    const creditCard = page.getByText(/Crédito a favor/i);
+    if ((await creditCard.count()) > 0) {
+      await expect(creditCard.first()).toBeVisible();
+    }
+  });
+
+  // CQ11-14: Verificar que en el modal de pago se muestra el crédito disponible
+  test("CQ11-14: modal pago muestra credito disponible", async ({ page }) => {
+    expect(socioCreado).toBeDefined();
+    expect(socioCreado.socioId).toBeTruthy();
+    await iniciarSesion(page);
+
+    await page.goto(`/socios/${socioCreado.socioId}/cuenta-corriente`);
+    await expect(page.getByText(/^Cuenta Corriente$/).first()).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Seleccionar cuotas
+    const botonSeleccionarTodas = page.getByRole("button", {
+      name: /Seleccionar todas adeudadas/i,
+    });
+
+    if ((await botonSeleccionarTodas.count()) > 0) {
+      await botonSeleccionarTodas.click();
+
+      const botonRegistrarPago = page.getByRole("button", {
+        name: /Registrar pago/i,
+      });
+
+      if ((await botonRegistrarPago.count()) > 0 && (await botonRegistrarPago.isEnabled())) {
+        await botonRegistrarPago.click();
+
+        const dialog = page.getByRole("dialog");
+        await expect(dialog).toBeVisible({ timeout: 5000 });
+
+        // Verificar que el modal muestra info de crédito si está disponible
+        const creditoInfo = page.getByText(/Crédito a favor disponible/i);
+        if ((await creditoInfo.count()) > 0) {
+          await expect(creditoInfo).toBeVisible();
+        }
+
+        // Cerrar modal sin guardar
+        await page.keyboard.press("Escape");
+      }
+    }
+  });
+
   // CQ11-CLEANUP: Eliminar socio de prueba
   test("CQ11-CLEANUP: eliminar socio de prueba", async ({ page }) => {
     if (!socioCreado) {

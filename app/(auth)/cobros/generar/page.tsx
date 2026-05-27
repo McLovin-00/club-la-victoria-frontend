@@ -61,7 +61,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const formatoMoneda = (monto: number) =>
-  new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" }).format(monto);
+  new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(monto);
 const normalizarTexto = (texto: string): string => {
   if (!texto) return "";
   return texto

@@ -6,6 +6,7 @@ import { useMemo, useState, useEffect } from "react";
 import {
   ArrowLeft,
   CalendarCheck,
+  CalendarDays,
   CheckCircle,
   CircleAlert,
   CircleCheck,
@@ -59,6 +60,7 @@ import { useRegistrarPago } from "@/hooks/api/cobros/useRegistrarPago";
 import { useMetodosPago } from "@/hooks/api/cobros/useMetodosPago";
 import { usePagoCuotasSeleccionadas } from "@/hooks/api/cobros/usePagoCuotasSeleccionadas";
 import { useProcesarResultadosTarjetaCentro } from "@/hooks/api/cobros/useProcesarResultadosTarjetaCentro";
+import { usePagoAnual } from "@/hooks/api/cobros/usePagoAnual";
 import { abrirReciboHtml, abrirReciboMultipleHtml } from "@/hooks/api/cobros/useTalonario";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
@@ -78,7 +80,7 @@ const meses = [
 ];
 
 const currentYear = new Date().getFullYear();
-const yearsOptions = [currentYear, currentYear - 1, currentYear - 2];
+const yearsOptions = [currentYear + 1, currentYear, currentYear - 1, currentYear - 2];
 
 export default function CuentaCorrientePage() {
   const { id } = useParams();
@@ -93,12 +95,17 @@ export default function CuentaCorrientePage() {
   const { mutate: registrarPago, isPending: isPagando } = useRegistrarPago();
   const pagoMasivoMutation = usePagoCuotasSeleccionadas();
   const procesarResultadosTarjetaCentroMutation = useProcesarResultadosTarjetaCentro();
+  const pagoAnualMutation = usePagoAnual();
+  const [modalPagoAnualAbierto, setModalPagoAnualAbierto] = useState(false);
+  const [anioSeleccionadoPagoAnual, setAnioSeleccionadoPagoAnual] = useState(currentYear);
+  const [metodoPagoAnualId, setMetodoPagoAnualId] = useState<number>(0);
   const [cuotasSeleccionadas, setCuotasSeleccionadas] = useState<number[]>([]);
   const [metodoPrincipalId, setMetodoPrincipalId] = useState<number>(0);
   const [usarSegundoMetodo, setUsarSegundoMetodo] = useState(false);
   const [metodoSecundarioId, setMetodoSecundarioId] = useState<number>(0);
   const [metodoPagoIndividualId, setMetodoPagoIndividualId] = useState<number>(0);
   const [modalPagoIndividualAbierto, setModalPagoIndividualAbierto] = useState(false);
+  const [montoPagoIndividual, setMontoPagoIndividual] = useState("");
   const [cuotaPagoIndividual, setCuotaPagoIndividual] = useState<{
     id: number;
     periodo: string;
@@ -113,8 +120,9 @@ export default function CuentaCorrientePage() {
       if (!metodoPrincipalId) setMetodoPrincipalId(metodosPago[0].id);
       if (!metodoSecundarioId) setMetodoSecundarioId(metodosPago.length > 1 ? metodosPago[1].id : metodosPago[0].id);
       if (!metodoPagoIndividualId) setMetodoPagoIndividualId(metodosPago[0].id);
+      if (!metodoPagoAnualId) setMetodoPagoAnualId(metodosPago[0].id);
     }
-  }, [metodosPago, metodoPagoIndividualId, metodoPrincipalId, metodoSecundarioId]);
+  }, [metodosPago, metodoPagoIndividualId, metodoPrincipalId, metodoSecundarioId, metodoPagoAnualId]);
   const [montoMetodoPrincipal, setMontoMetodoPrincipal] = useState("");
   const [montoMetodoSecundario, setMontoMetodoSecundario] = useState("");
   const [observacionesPagoMasivo, setObservacionesPagoMasivo] = useState("");
@@ -188,6 +196,18 @@ export default function CuentaCorrientePage() {
     [cuotasPendientesSeleccionadas],
   );
 
+  // Net payable after individual credit
+  const creditoDisponible = Number(cuentaCorriente?.creditoIndividual ?? 0);
+  const totalNeto = Math.max(totalSeleccionado - creditoDisponible, 0);
+  const montoNetoPagoIndividual = cuotaPagoIndividual
+    ? Math.max(Number(cuotaPagoIndividual.monto) - creditoDisponible, 0)
+    : 0;
+  const montoPagoIndividualNumerico = Number(montoPagoIndividual || 0);
+  const montoPagoIndividualValido = Number.isFinite(montoPagoIndividualNumerico);
+  const excedentePagoIndividual = montoPagoIndividualValido
+    ? Math.max(montoPagoIndividualNumerico - montoNetoPagoIndividual, 0)
+    : 0;
+
   const totalIngresadoMetodos = useMemo(() => {
     const principal = Number(montoMetodoPrincipal || 0);
     const secundario = usarSegundoMetodo ? Number(montoMetodoSecundario || 0) : 0;
@@ -196,19 +216,21 @@ export default function CuentaCorrientePage() {
 
   const montoPrincipalNumerico = Number(montoMetodoPrincipal || 0);
   const montoSecundarioNumerico = Number(montoMetodoSecundario || 0);
-  const totalSeleccionadoRedondeado = Number(totalSeleccionado.toFixed(2));
+  const totalNetoRedondeado = Number(totalNeto.toFixed(2));
   const totalIngresadoRedondeado = Number(totalIngresadoMetodos.toFixed(2));
-  const diferenciaCarga = Number((totalSeleccionadoRedondeado - totalIngresadoRedondeado).toFixed(2));
+  const totalIngresadoParaValidar = !usarSegundoMetodo && montoPrincipalNumerico <= 0
+    ? totalNetoRedondeado
+    : totalIngresadoRedondeado;
+  const diferenciaCarga = Number((totalNetoRedondeado - totalIngresadoParaValidar).toFixed(2));
+  const excedentePagoMasivo = Number((totalIngresadoParaValidar - totalNetoRedondeado).toFixed(2));
   const metodosDuplicados = usarSegundoMetodo && metodoPrincipalId === metodoSecundarioId;
   const montosSegundoMetodoValidos = !usarSegundoMetodo ||
     (montoPrincipalNumerico > 0 && montoSecundarioNumerico > 0);
-  const totalValidoParaConfirmar =
-    (!usarSegundoMetodo && montoPrincipalNumerico <= 0) ||
-    totalIngresadoRedondeado === totalSeleccionadoRedondeado;
+  const totalValidoParaConfirmar = totalIngresadoParaValidar >= totalNetoRedondeado;
   const puedeConfirmarPagoMasivo =
     !metodosDuplicados &&
     montosSegundoMetodoValidos &&
-    totalSeleccionadoRedondeado > 0 &&
+    totalSeleccionado > 0 &&
     totalValidoParaConfirmar;
 
   const todasPendientesSeleccionadas =
@@ -374,11 +396,19 @@ export default function CuentaCorrientePage() {
   const abrirModalPagoIndividual = (cuota: { id: number; periodo: string; monto: number }) => {
     setCuotaPagoIndividual(cuota);
     setMetodoPagoIndividualId(metodoPrincipalId || (metodosPago?.[0]?.id ?? 0));
+    const montoCuota = Number(cuota.monto);
+    const montoNeto = Math.max(montoCuota - creditoDisponible, 0);
+    setMontoPagoIndividual(montoNeto > 0 ? String(montoNeto) : "");
     setModalPagoIndividualAbierto(true);
   };
 
   const handleConfirmarPagoIndividual = () => {
-    if (!cuotaPagoIndividual || !metodoPagoIndividualId) {
+    if (
+      !cuotaPagoIndividual ||
+      !metodoPagoIndividualId ||
+      !montoPagoIndividualValido ||
+      montoPagoIndividualNumerico < montoNetoPagoIndividual
+    ) {
       return;
     }
 
@@ -386,6 +416,7 @@ export default function CuentaCorrientePage() {
       {
         cuotaId: cuotaPagoIndividual.id,
         metodoPagoId: metodoPagoIndividualId,
+        montoPagado: montoPagoIndividualNumerico,
       },
       {
         onSuccess: () => {
@@ -436,7 +467,7 @@ export default function CuentaCorrientePage() {
     }
 
     limpiarFormularioPagoMasivo();
-    setMontoMetodoPrincipal(String(Math.round(totalSeleccionado)));
+    setMontoMetodoPrincipal(String(Math.round(totalNeto)));
     setModalPagoMasivoAbierto(true);
   };
 
@@ -457,8 +488,8 @@ export default function CuentaCorrientePage() {
       return;
     }
 
-    const totalEsperado = Number(totalSeleccionado.toFixed(2));
-    const totalCargado = Number(totalIngresadoMetodos.toFixed(2));
+    const totalEsperado = Number(totalNeto.toFixed(2));
+    const totalCargado = Number(totalIngresadoParaValidar.toFixed(2));
 
     const pagos = usarSegundoMetodo
       ? [
@@ -475,7 +506,7 @@ export default function CuentaCorrientePage() {
           },
         ];
 
-    const algunMontoInvalido = pagos.some((pago) => Number(pago.monto) <= 0);
+    const algunMontoInvalido = pagos.some((pago) => Number(pago.monto) < 0);
     if (algunMontoInvalido) {
       return;
     }
@@ -483,7 +514,7 @@ export default function CuentaCorrientePage() {
     const totalPagos = Number(
       pagos.reduce((acc, pago) => acc + Number(pago.monto), 0).toFixed(2),
     );
-    if (totalPagos !== totalEsperado || totalCargado > 0 && totalCargado !== totalEsperado) {
+    if (totalPagos < totalEsperado || totalCargado > 0 && totalCargado < totalEsperado) {
       return;
     }
 
@@ -555,7 +586,7 @@ export default function CuentaCorrientePage() {
             </Card>
 
             {/* Resumen de totales */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card className="border-l-4 border-l-green-500">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-4">
@@ -603,6 +634,27 @@ export default function CuentaCorrientePage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {typeof cuentaCorriente?.creditoIndividual === 'number' && cuentaCorriente.creditoIndividual > 0 && (
+                <Card className="border-l-4 border-l-blue-500">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-4">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <CreditCard className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Crédito a favor</p>
+                        <p className="text-2xl font-bold text-blue-600">
+                          {formatCurrency(cuentaCorriente.creditoIndividual)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Se aplica automáticamente
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
 
             {/* Grilla de estado de pagos por mes */}
@@ -619,6 +671,23 @@ export default function CuentaCorrientePage() {
                     </CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="border-emerald-600 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                      onClick={() => {
+                        setAnioSeleccionadoPagoAnual(currentYear);
+                        if (metodosPago && metodosPago.length > 0) {
+                          setMetodoPagoAnualId(metodosPago[0].id);
+                        }
+                        setModalPagoAnualAbierto(true);
+                      }}
+                      disabled={!hayMetodosPagoActivos}
+                    >
+                      <CalendarDays className="h-4 w-4 mr-1" />
+                      Pagar año completo
+                    </Button>
                     <Label htmlFor="anio" className="text-sm whitespace-nowrap">Año:</Label>
                     <Select
                       value={String(selectedYear)}
@@ -797,9 +866,33 @@ export default function CuentaCorrientePage() {
                             </div>
                             <div className="rounded-lg border bg-muted/40 p-3">
                               <p className="text-xs uppercase tracking-wide text-muted-foreground">Total a pagar</p>
-                              <p className="text-lg font-semibold text-primary">{formatCurrency(totalSeleccionado)}</p>
+                              <p className="text-lg font-semibold text-primary">{formatCurrency(totalNeto)}</p>
+                              {creditoDisponible > 0 && totalNeto < totalSeleccionado && (
+                                <p className="text-xs text-muted-foreground">
+                                  (bruto {formatCurrency(totalSeleccionado)} - crédito {formatCurrency(creditoDisponible)})
+                                </p>
+                              )}
                             </div>
                           </div>
+
+                          {typeof cuentaCorriente?.creditoIndividual === 'number' && cuentaCorriente.creditoIndividual > 0 && (
+                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <CreditCard className="h-4 w-4 text-blue-600" />
+                                  <span className="text-sm font-medium text-blue-700">Crédito a favor disponible</span>
+                                </div>
+                                <span className="text-sm font-bold text-blue-700">
+                                  {formatCurrency(cuentaCorriente.creditoIndividual)}
+                                </span>
+                              </div>
+                              {cuentaCorriente.creditoIndividual > 0 && (
+                                <p className="text-xs text-blue-600">
+                                  El crédito se aplicará automáticamente al monto a cobrar.
+                                </p>
+                              )}
+                            </div>
+                          )}
 
                           <div className="rounded-lg border p-4 space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -924,6 +1017,11 @@ export default function CuentaCorrientePage() {
                                 <CircleAlert className="h-4 w-4" />
                                 El total ingresado difiere por {formatCurrency(Math.abs(diferenciaCarga))}. Ajustalo para continuar.
                               </span>
+                            ) : excedentePagoMasivo > 0 ? (
+                              <span className="flex items-center gap-2">
+                                <CircleCheck className="h-4 w-4" />
+                                El excedente de {formatCurrency(excedentePagoMasivo)} quedará como saldo a favor del socio.
+                              </span>
                             ) : (
                               <span className="flex items-center gap-2">
                                 <CircleCheck className="h-4 w-4" />
@@ -933,7 +1031,10 @@ export default function CuentaCorrientePage() {
                           </div>
 
                           <p className="text-sm text-muted-foreground">
-                            Total seleccionado: {formatCurrency(totalSeleccionado)} · Total ingresado: {formatCurrency(totalIngresadoMetodos)}
+                            {creditoDisponible > 0 && totalNeto < totalSeleccionado
+                              ? `Neto a pagar: ${formatCurrency(totalNeto)} (bruto ${formatCurrency(totalSeleccionado)} - crédito ${formatCurrency(creditoDisponible)}) · Ingresado: ${formatCurrency(totalIngresadoParaValidar)}`
+                              : `Total seleccionado: ${formatCurrency(totalNeto)} · Total ingresado: ${formatCurrency(totalIngresadoParaValidar)}`
+                            }
                           </p>
                           {!hayMetodosPagoActivos && (
                             <p className="text-sm font-medium text-red-600">
@@ -1030,6 +1131,40 @@ export default function CuentaCorrientePage() {
                           )}
                         </div>
 
+                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-xs text-blue-700">
+                          <p className="font-medium text-blue-900">Saldo a favor del socio</p>
+                          <p className="mt-1 text-base font-semibold text-blue-900">
+                            {formatCurrency(creditoDisponible)}
+                          </p>
+                          <p className="mt-1">
+                            {creditoDisponible > 0
+                              ? "Se aplicará automáticamente al monto a cobrar."
+                              : "El socio no tiene saldo a favor disponible."}
+                          </p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Importe que paga el socio</Label>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={montoPagoIndividual}
+                            onChange={(e) => setMontoPagoIndividual(e.target.value)}
+                            placeholder="0"
+                          />
+                          {cuotaPagoIndividual && !montoPagoIndividual && (
+                            <p className="text-xs text-blue-600">
+                              Crédito cubre esta cuota. El importe queda en 0.
+                            </p>
+                          )}
+                          {cuotaPagoIndividual && excedentePagoIndividual > 0 && (
+                            <p className="text-xs text-blue-600">
+                              El excedente de {formatCurrency(excedentePagoIndividual)} quedará como crédito a favor del socio.
+                            </p>
+                          )}
+                        </div>
+
                         <DialogFooter>
                           <Button
                             type="button"
@@ -1046,6 +1181,8 @@ export default function CuentaCorrientePage() {
                               isPagando ||
                               !metodoPagoIndividualId ||
                               !cuotaPagoIndividual ||
+                              !montoPagoIndividualValido ||
+                              montoPagoIndividualNumerico < montoNetoPagoIndividual ||
                               !hayMetodosPagoActivos
                             }
                           >
@@ -1440,6 +1577,188 @@ export default function CuentaCorrientePage() {
           </>
         )}
       </div>
+
+      {/* Dialog pago anual */}
+      <Dialog open={modalPagoAnualAbierto} onOpenChange={setModalPagoAnualAbierto}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-emerald-600" />
+              Pagar año completo
+            </DialogTitle>
+            <DialogDescription>
+              Genera y paga todas las cuotas pendientes del año seleccionado para{" "}
+              <span className="font-medium">{socio?.apellido}, {socio?.nombre}</span>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {socio?.tarjetaCentro && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <p className="font-medium">Socio con Tarjeta del Centro</p>
+                <p className="mt-1 text-amber-700">
+                  El pago anual se registrará con el método seleccionado, sin pasar por el proceso de Tarjeta del Centro.
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Año a pagar</Label>
+              <Select
+                value={String(anioSeleccionadoPagoAnual)}
+                onValueChange={(v) => setAnioSeleccionadoPagoAnual(Number(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {yearsOptions.map((year) => (
+                    <SelectItem key={year} value={String(year)}>
+                      {year}{year === currentYear ? " (año actual)" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Método de pago</Label>
+              <Select
+                value={metodoPagoAnualId ? String(metodoPagoAnualId) : ""}
+                onValueChange={(v) => setMetodoPagoAnualId(Number(v))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccione un método" />
+                </SelectTrigger>
+                <SelectContent>
+                  {metodosPago?.map((metodo) => (
+                    <SelectItem key={metodo.id} value={String(metodo.id)}>
+                      {metodo.nombre}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
+              Se generarán las cuotas que no existan y se pagarán todas las pendientes del año {anioSeleccionadoPagoAnual}. El monto se calcula según la categoría actual del socio.
+            </div>
+
+            {(() => {
+              const montoMensual =
+                typeof socio?.categoria === "object" && socio.categoria !== null
+                  ? (socio.categoria as { montoMensual?: number }).montoMensual
+                  : undefined;
+
+              if (!montoMensual) return null;
+
+              const cuotasDelAnio = (cuentaCorriente?.cuotas ?? []).filter(
+                (c) => c.periodo.startsWith(String(anioSeleccionadoPagoAnual)),
+              );
+              const cuotasYaPagadasAnio = cuotasDelAnio.filter((c) => c.estado === "PAGADA").length;
+              const cuotasPendientesExistentes = cuotasDelAnio.filter((c) => c.estado === "PENDIENTE");
+              const mesesSinCuota = 12 - cuotasDelAnio.length;
+              const mesesAPagar = cuotasPendientesExistentes.length + mesesSinCuota;
+
+              // Total real: monto de cuotas pendientes existentes + montoMensual × meses sin cuota
+              const totalCuotasPendientesExistentes = cuotasPendientesExistentes.reduce(
+                (acc, c) => acc + Number(c.monto),
+                0,
+              );
+              const totalEstimado = totalCuotasPendientesExistentes + mesesSinCuota * montoMensual;
+
+              const fmt = (v: number) =>
+                new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 }).format(v);
+
+              return (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-1">
+                  <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">
+                    Resumen estimado
+                  </p>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Meses a pagar</span>
+                    <span className="font-medium">{mesesAPagar} de 12</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Monto por mes</span>
+                    <span className="font-medium">{fmt(montoMensual)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-semibold border-t border-emerald-200 pt-1 mt-1">
+                    <span>Total a pagar</span>
+                    <span className="text-emerald-700">{fmt(totalEstimado)}</span>
+                  </div>
+                  {cuotasYaPagadasAnio > 0 && (
+                    <p className="text-xs text-muted-foreground pt-1">
+                      {cuotasYaPagadasAnio} {cuotasYaPagadasAnio === 1 ? "mes ya pagado" : "meses ya pagados"} no se incluyen.
+                    </p>
+                  )}
+                  {mesesAPagar === 0 && (
+                    <p className="text-xs font-medium text-emerald-700 pt-1">
+                      ✓ Todas las cuotas del año ya están pagadas.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setModalPagoAnualAbierto(false)}
+              disabled={pagoAnualMutation.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700"
+              disabled={
+                !metodoPagoAnualId ||
+                pagoAnualMutation.isPending ||
+                (() => {
+                  const cuotasDelAnio = (cuentaCorriente?.cuotas ?? []).filter(
+                    (c) => c.periodo.startsWith(String(anioSeleccionadoPagoAnual)),
+                  );
+                  const pendientes = cuotasDelAnio.filter((c) => c.estado === "PENDIENTE").length;
+                  const sinCuota = 12 - cuotasDelAnio.length;
+                  return pendientes === 0 && sinCuota === 0;
+                })()
+              }
+              title={
+                (() => {
+                  const cuotasDelAnio = (cuentaCorriente?.cuotas ?? []).filter(
+                    (c) => c.periodo.startsWith(String(anioSeleccionadoPagoAnual)),
+                  );
+                  const pendientes = cuotasDelAnio.filter((c) => c.estado === "PENDIENTE").length;
+                  const sinCuota = 12 - cuotasDelAnio.length;
+                  return pendientes === 0 && sinCuota === 0
+                    ? "Todas las cuotas del año ya están pagadas"
+                    : undefined;
+                })()
+              }
+              onClick={() => {
+                if (!idValido || !metodoPagoAnualId) return;
+                pagoAnualMutation.mutate(
+                  { socioId, anio: anioSeleccionadoPagoAnual, metodoPagoId: metodoPagoAnualId },
+                  { onSuccess: () => setModalPagoAnualAbierto(false) },
+                );
+              }}
+            >
+              {pagoAnualMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Procesando...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Confirmar pago anual
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

@@ -25,6 +25,8 @@ export interface CuentasGrupoData {
   totalPagado: number;
   sociosAlDia: number;
   sociosEnDeuda: number;
+  /** Crédito grupal disponible del grupo familiar, calculado por el backend */
+  creditoGrupal?: number;
 }
 
 export interface MemberError {
@@ -38,6 +40,25 @@ export const useCuentasGrupoFamiliar = (grupoId: number | null, anio: number) =>
   // Get the list of members in the group
   const { data: socios, isLoading: isLoadingSocios, error: sociosError } =
     useSociosEnGrupo(grupoId);
+
+  // Fetch group credit summary from the backend
+  const [grupoDataResult] = useQueries({
+    queries: [
+      {
+        queryKey: ["grupo-familiar-credito", grupoId],
+        queryFn: async () => {
+          if (!grupoId) return null;
+          const { data } = await apiClient.get<{
+            id: number;
+            creditoGrupal?: number;
+          }>(`/cobradores/mobile/grupos-familiares/${grupoId}`);
+          return data;
+        },
+        enabled: !!grupoId,
+        staleTime: STALE_TIME,
+      },
+    ],
+  });
 
   // Create queries array (empty if no socios) - MUST happen before useQueries
   const queries = (socios ?? []).map((socio) => ({
@@ -133,6 +154,7 @@ export const useCuentasGrupoFamiliar = (grupoId: number | null, anio: number) =>
       totalPagado,
       sociosAlDia,
       sociosEnDeuda,
+      creditoGrupal: grupoDataResult?.data?.creditoGrupal,
     },
     isLoading,
     error: isLoading ? undefined : sociosError,

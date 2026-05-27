@@ -23,6 +23,7 @@ interface RegistrarPagoDto {
   cuotaId: number;
   metodoPagoId: number;
   observaciones?: string;
+  montoPagado?: number;
 }
 
 export const useRegistrarPago = () => {

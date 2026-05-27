@@ -11,7 +11,11 @@ import { formatCurrency } from "@/lib/cuenta-corriente-utils"
 
 export function DashboardStats() {
   // Período actual para el reporte de cobranza (formato YYYY-MM)
-  const periodoActual = new Date().toISOString().slice(0, 7)
+  const now = new Date()
+  const periodoActual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}`
 
   // Obtener datos de la API
   const {
@@ -30,8 +34,12 @@ export function DashboardStats() {
   const isError = isErrorReporte || isErrorSocios
 
   // Valores obtenidos de la API con fallback a 0
-  const morosidad = reporteCobranza?.morosidad ?? 0
+  const porcentajeMorosidad = reporteCobranza?.morosidad ?? 0
   const recaudacionMes = reporteCobranza?.totalCobrado ?? 0
+  const deudaMes = Math.max(
+    (reporteCobranza?.totalGenerado ?? 0) - recaudacionMes,
+    0
+  )
   const cuotasPendientes = reporteCobranza?.cuotasPendientes ?? 0
   const cuotasPagadas = reporteCobranza?.cuotasPagadas ?? 0
   const porcentajeCobranza = reporteCobranza?.porcentajeCobranza ?? 0
@@ -40,8 +48,8 @@ export function DashboardStats() {
   const stats = [
     {
       title: "Morosidad Total",
-      value: formatCurrency(morosidad),
-      description: `${cuotasPendientes} cuotas impagas`,
+      value: formatCurrency(deudaMes),
+      description: `${cuotasPendientes} cuotas impagas (${porcentajeMorosidad.toFixed(1)}%)`,
       icon: AlertTriangle,
       // Morosidad se destaca con color de alerta
       trend: "danger" as const,

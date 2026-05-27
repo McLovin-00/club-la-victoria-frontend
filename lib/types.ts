@@ -28,6 +28,7 @@ export interface Socio {
 export interface CategoriaSocioResumen {
   id: number;
   nombre: string;
+  montoMensual?: number;
 }
 
 // Interfaz completa para categoría de socio
