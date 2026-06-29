@@ -15,11 +15,14 @@ import {
   Trash2,
   User,
   Users,
+  X,
 } from "lucide-react";
 
 
 import { useDeleteSocio } from "@/hooks/api/socios/useDeleteSocio";
 import { useSocios } from "@/hooks/api/socios/useSocios";
+import { useToggleDeclaracionJurada } from "@/hooks/api/socios/useToggleDeclaracionJurada";
+import { useCategorias } from "@/hooks/api/categorias/useCategorias";
 import { ESTADO_SOCIO, PAGINACION } from "@/lib/constants";
 import { SocioWithFoto } from "@/lib/types";
 import { getEstadoBadgeVariant, getCategoriaBadgeClasses } from "@/lib/utils/badges";
@@ -35,6 +38,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -76,13 +80,39 @@ export const MemberManagement = React.memo(function MemberManagement() {
     nextPage,
     hasNextPage,
     hasPreviousPage,
+    filtroCategoriaId,
+    setFiltroCategoriaId,
+    filtroEstado,
+    setFiltroEstado,
+    filtroTarjetaCentro,
+    setFiltroTarjetaCentro,
+    hayFiltrosActivos,
+    limpiarFiltros,
   } = useSocios();
   const { mutate: deleteSocio, isPending: isLoadingDelete } = useDeleteSocio();
+  const { mutate: toggleDeclaracionJurada, isPending: isTogglingDeclaracion } =
+    useToggleDeclaracionJurada();
+  const { data: categorias = [] } = useCategorias();
 
   const socios = sociosPaginados as SocioListado[];
 
   const handleDeleteSocio = (id: string) => {
     deleteSocio(id);
+  };
+
+  const esAdherente = (socio: SocioListado) => {
+    const nombreCategoria = getNombreCategoria(socio);
+    return nombreCategoria === "ADHERENTE";
+  };
+
+  const handleToggleDeclaracionJurada = (
+    socioId: number,
+    checked: boolean,
+  ) => {
+    toggleDeclaracionJurada({
+      id: socioId,
+      declaracionJurada: checked,
+    });
   };
 
   const startIndex = (currentPage - 1) * sociosPorPagina;
@@ -246,6 +276,78 @@ export const MemberManagement = React.memo(function MemberManagement() {
               </Button>
             </Link>
           </div>
+          <div className="flex flex-wrap items-center gap-3 pt-4">
+            <Select
+              value={filtroCategoriaId?.toString() ?? "todas"}
+              onValueChange={(value) =>
+                setFiltroCategoriaId(value === "todas" ? undefined : Number(value))
+              }
+            >
+              <SelectTrigger className="w-[180px] h-9 text-sm">
+                <SelectValue placeholder="Categoría" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todas">Todas las categorías</SelectItem>
+                {categorias.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id.toString()}>
+                    {cat.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={filtroEstado ?? "todos"}
+              onValueChange={(value) =>
+                setFiltroEstado(value === "todos" ? undefined : value)
+              }
+            >
+              <SelectTrigger className="w-[160px] h-9 text-sm">
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos los estados</SelectItem>
+                <SelectItem value={ESTADO_SOCIO.ACTIVO}>Activo</SelectItem>
+                <SelectItem value={ESTADO_SOCIO.MOROSO}>Moroso</SelectItem>
+                <SelectItem value={ESTADO_SOCIO.INACTIVO}>Inactivo</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={
+                filtroTarjetaCentro === undefined
+                  ? "todos"
+                  : filtroTarjetaCentro
+                    ? "si"
+                    : "no"
+              }
+              onValueChange={(value) => {
+                if (value === "todos") setFiltroTarjetaCentro(undefined);
+                else setFiltroTarjetaCentro(value === "si");
+              }}
+            >
+              <SelectTrigger className="w-[180px] h-9 text-sm">
+                <SelectValue placeholder="Tarjeta centro" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos</SelectItem>
+                <SelectItem value="si">Con tarjeta</SelectItem>
+                <SelectItem value="no">Sin tarjeta</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {hayFiltrosActivos && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={limpiarFiltros}
+                className="h-9 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Limpiar filtros
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -325,6 +427,26 @@ export const MemberManagement = React.memo(function MemberManagement() {
                   ),
                 },
                 {
+                  key: "declaracionJurada",
+                  header: "Decl. jurada",
+                  cell: (socio) => {
+                    if (!esAdherente(socio)) return null;
+                    return (
+                      <Checkbox
+                        checked={!!socio.declaracionJurada}
+                        onCheckedChange={(checked) =>
+                          handleToggleDeclaracionJurada(
+                            Number(socio.id),
+                            checked === true,
+                          )
+                        }
+                        disabled={isTogglingDeclaracion}
+                        aria-label="Declaración jurada"
+                      />
+                    );
+                  },
+                },
+                {
                   key: "acciones",
                   header: "Acciones",
                   cell: (socio) => renderActionButtons(socio),
@@ -361,6 +483,21 @@ export const MemberManagement = React.memo(function MemberManagement() {
                     <div className="flex flex-wrap items-center gap-2">
                       {renderCategoriaBadge(socio)}
                       {renderEstadoBadge(socio.estado)}
+                      {esAdherente(socio) && (
+                        <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+                          <Checkbox
+                            checked={!!socio.declaracionJurada}
+                            onCheckedChange={(checked) =>
+                              handleToggleDeclaracionJurada(
+                                Number(socio.id),
+                                checked === true,
+                              )
+                            }
+                            disabled={isTogglingDeclaracion}
+                          />
+                          Decl. jurada
+                        </label>
+                      )}
                     </div>
                     {renderActionButtons(socio)}
                   </div>

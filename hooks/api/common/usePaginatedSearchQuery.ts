@@ -15,12 +15,14 @@ interface UsePaginatedSearchQueryOptions<T> {
   queryKey: string;
   url: string;
   initialLimit?: number;
+  extraParams?: Record<string, unknown>;
 }
 
 export function usePaginatedSearchQuery<T>({
   queryKey,
   url,
   initialLimit = 10,
+  extraParams = {},
 }: UsePaginatedSearchQueryOptions<T>) {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(initialLimit);
@@ -42,8 +44,10 @@ export function usePaginatedSearchQuery<T>({
     setPage(1); // Reset to first page when changing items per page
   }, []);
 
+  const queryKeyFull = [queryKey, url, page, limit, searchTerm, extraParams];
+
   const query = useQuery<PaginatedResponse<T>>({
-    queryKey: [queryKey, url, page, limit, searchTerm],
+    queryKey: queryKeyFull,
     queryFn: async () => {
       // If no url provided, return an empty paginated response to avoid
       // sending a request to the baseURL (e.g. `/api/v1?page=1&limit=10`).
@@ -61,6 +65,7 @@ export function usePaginatedSearchQuery<T>({
           page,
           limit,
           search: searchTerm || undefined,
+          ...extraParams,
         },
       });
       return data;

@@ -190,6 +190,19 @@ export default function MemberDetailPage() {
                     )}
                   </div>
                 </div>
+
+                {categoriaActual === "ADHERENTE" && (
+                  <div className="rounded-lg border border-border p-4 space-y-2">
+                    <p className="text-sm text-muted-foreground">Declaración jurada</p>
+                    <div>
+                      {socio.declaracionJurada ? (
+                        <Badge className="bg-green-600 text-white">Presentada</Badge>
+                      ) : (
+                        <Badge variant="secondary">Pendiente</Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

@@ -23,6 +23,7 @@ export interface Socio {
   nombreCategoria?: string;
   tarjetaCentro?: boolean;
   numeroTarjetaCentro?: string;
+  declaracionJurada?: boolean;
 }
 
 export interface CategoriaSocioResumen {
