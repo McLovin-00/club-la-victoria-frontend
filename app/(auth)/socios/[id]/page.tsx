@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSocioById } from "@/hooks/api/socios/useSocios";
 import { ESTADO_SOCIO } from "@/lib/constants";
-import { formatDateLong } from "@/lib/utils/date";
+import { calcularEdad, formatDateLong } from "@/lib/utils/date";
 
 function formatFechaAlta(fecha?: string): string {
   if (!fecha) {
@@ -191,7 +191,7 @@ export default function MemberDetailPage() {
                   </div>
                 </div>
 
-                {categoriaActual === "ADHERENTE" && (
+                {socio.fechaNacimiento && calcularEdad(socio.fechaNacimiento) < 18 && (
                   <div className="rounded-lg border border-border p-4 space-y-2">
                     <p className="text-sm text-muted-foreground">Declaración jurada</p>
                     <div>

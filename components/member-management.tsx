@@ -26,6 +26,7 @@ import { useCategorias } from "@/hooks/api/categorias/useCategorias";
 import { ESTADO_SOCIO, PAGINACION } from "@/lib/constants";
 import { SocioWithFoto } from "@/lib/types";
 import { getEstadoBadgeVariant, getCategoriaBadgeClasses } from "@/lib/utils/badges";
+import { calcularEdad } from "@/lib/utils/date";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -100,9 +101,9 @@ export const MemberManagement = React.memo(function MemberManagement() {
     deleteSocio(id);
   };
 
-  const esAdherente = (socio: SocioListado) => {
-    const nombreCategoria = getNombreCategoria(socio);
-    return nombreCategoria === "ADHERENTE";
+  const esMenorDeEdad = (socio: SocioListado) => {
+    if (!socio.fechaNacimiento) return false;
+    return calcularEdad(socio.fechaNacimiento) < 18;
   };
 
   const handleToggleDeclaracionJurada = (
@@ -430,7 +431,7 @@ export const MemberManagement = React.memo(function MemberManagement() {
                   key: "declaracionJurada",
                   header: "Decl. jurada",
                   cell: (socio) => {
-                    if (!esAdherente(socio)) return null;
+                    if (!esMenorDeEdad(socio)) return null;
                     return (
                       <Checkbox
                         checked={!!socio.declaracionJurada}
@@ -483,7 +484,7 @@ export const MemberManagement = React.memo(function MemberManagement() {
                     <div className="flex flex-wrap items-center gap-2">
                       {renderCategoriaBadge(socio)}
                       {renderEstadoBadge(socio.estado)}
-                      {esAdherente(socio) && (
+                      {esMenorDeEdad(socio) && (
                         <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
                           <Checkbox
                             checked={!!socio.declaracionJurada}

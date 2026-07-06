@@ -141,6 +141,24 @@ export function isDateRangeActive(startDate: string, endDate: string): boolean {
 }
 
 /**
+ * Calculate age in years from a birth date string
+ * @param fechaNacimiento - Birth date string in YYYY-MM-DD format
+ * @returns Age in years
+ */
+export function calcularEdad(fechaNacimiento: string): number {
+  const [year, month, day] = fechaNacimiento.split("-").map(Number);
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - year;
+  const cumpleEsteAnio =
+    hoy.getMonth() + 1 > month ||
+    (hoy.getMonth() + 1 === month && hoy.getDate() >= day);
+  if (!cumpleEsteAnio) {
+    edad -= 1;
+  }
+  return edad;
+}
+
+/**
  * Convert a Date object to YYYY-MM-DD string without timezone conversion
  * @param date - Date object
  * @returns Date string in YYYY-MM-DD format (local timezone)
