@@ -1,25 +1,41 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { useMorososDetallados, SeveridadMoroso } from "@/hooks/api/cobros/useMorososDetallados"
-import { MorososStats, MorososFilters, MorososTable } from "@/components/morosos"
+import { MorososStats, MorososFilters, MorososTable, MorososPrintBar } from "@/components/morosos"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Loader2, AlertTriangle, RefreshCw } from "lucide-react"
 import { PAGINACION } from "@/lib/constants"
 
-export default function MorososPage() {
+function MorososPageFallback() {
+  return (
+    <DashboardLayout title="Socios Morosos" description="Lista detallada de socios con cuotas pendientes">
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            <span className="ml-3 text-muted-foreground">Cargando morosos...</span>
+          </CardContent>
+        </Card>
+      </div>
+    </DashboardLayout>
+  )
+}
+
+function MorososPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
   // Initialize from URL params
-  const [severidad, setSeveridad] = useState<SeveridadMoroso>(
+  const [severidad, setSeveridad] = useState<SeveridadMoroso>(() =>
     (searchParams.get("severidad") as SeveridadMoroso) || "todos"
   )
-  const [busqueda, setBusqueda] = useState(searchParams.get("busqueda") || "")
+  const [busqueda, setBusqueda] = useState(() => searchParams.get("busqueda") || "")
   const [limit, setLimit] = useState<number>(PAGINACION.TAMAÑO_PAGINA_POR_DEFECTO)
+  const [excludedSocioIds, setExcludedSocioIds] = useState<Set<number>>(new Set())
 
   const { data, isLoading, isError, error, refetch } = useMorososDetallados({
     severidad: severidad === "todos" ? undefined : severidad,
@@ -42,10 +58,12 @@ export default function MorososPage() {
   }, [severidad, busqueda, router])
 
   const handleSeveridadChange = (value: SeveridadMoroso) => {
+    setExcludedSocioIds(new Set())
     setSeveridad(value)
   }
 
   const handleBusquedaChange = (value: string) => {
+    setExcludedSocioIds(new Set())
     setBusqueda(value)
   }
 
@@ -113,8 +131,22 @@ export default function MorososPage() {
           onBusquedaChange={handleBusquedaChange}
         />
 
+        {data?.morosos && (
+          <MorososPrintBar
+            morosos={data.morosos}
+            excludedSocioIds={excludedSocioIds}
+            onExcludedChange={setExcludedSocioIds}
+          />
+        )}
+
         {/* Table */}
-        {data?.morosos && <MorososTable morosos={data.morosos} />}
+        {data?.morosos && (
+          <MorososTable
+            morosos={data.morosos}
+            excludedSocioIds={excludedSocioIds}
+            onExcludedChange={setExcludedSocioIds}
+          />
+        )}
 
         {/* Pagination info */}
         {data && (
@@ -122,6 +154,7 @@ export default function MorososPage() {
             <div className="flex items-center gap-2">
               <span>Mostrar</span>
               <select
+                aria-label="Cantidad de morosos por página"
                 className="h-8 px-2 rounded-md border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 value={limit}
                 onChange={(e) => handleLimitChange(Number(e.target.value))}
@@ -143,5 +176,13 @@ export default function MorososPage() {
         )}
       </div>
     </DashboardLayout>
+  )
+}
+
+export default function MorososPage() {
+  return (
+    <Suspense fallback={<MorososPageFallback />}>
+      <MorososPageContent />
+    </Suspense>
   )
 }

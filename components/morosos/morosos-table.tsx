@@ -8,17 +8,52 @@ import { MorosoDetallado } from "@/hooks/api/cobros/useMorososDetallados"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import { ExternalLink, Phone, Mail, Calendar } from "lucide-react"
 
 interface MorososTableProps {
   morosos: MorosoDetallado[]
+  excludedSocioIds: Set<number>
+  onExcludedChange: (next: Set<number>) => void
 }
 
 const ROW_HEIGHT = 80
+const CURRENCY_FORMATTER = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+})
 
-export const MorososTable = React.memo(function MorososTable({ morosos }: MorososTableProps) {
+function getSeveridadBadge(mesesDeuda: number) {
+  if (mesesDeuda >= 4) {
+    return (
+      <Badge variant="destructive" className="text-xs">
+        {mesesDeuda} meses
+      </Badge>
+    )
+  }
+
+  return (
+    <Badge variant="secondary" className="bg-yellow-500 text-black text-xs">
+      {mesesDeuda} meses
+    </Badge>
+  )
+}
+
+function formatCurrency(amount: number) {
+  return CURRENCY_FORMATTER.format(amount)
+}
+
+export const MorososTable = React.memo(function MorososTable({
+  morosos,
+  excludedSocioIds,
+  onExcludedChange,
+}: MorososTableProps) {
   const router = useRouter()
   const parentRef = useRef<HTMLDivElement>(null)
+  const allSelected = morosos.length > 0 && excludedSocioIds.size === 0
+  const someSelected = morosos.some((moroso) => !excludedSocioIds.has(moroso.socioId)) && !allSelected
 
   const virtualizer = useVirtualizer({
     count: morosos.length,
@@ -31,28 +66,23 @@ export const MorososTable = React.memo(function MorososTable({ morosos }: Moroso
     router.push(`/socios/${socioId}/cuenta-corriente`)
   }
 
-  const getSeveridadBadge = (mesesDeuda: number) => {
-    if (mesesDeuda >= 4) {
-      return (
-        <Badge variant="destructive" className="text-xs">
-          {mesesDeuda} meses
-        </Badge>
-      )
+  const toggleMoroso = (socioId: number, checked: boolean) => {
+    const next = new Set(excludedSocioIds)
+    if (checked) {
+      next.delete(socioId)
+    } else {
+      next.add(socioId)
     }
-    return (
-      <Badge variant="secondary" className="bg-yellow-500 text-black text-xs">
-        {mesesDeuda} meses
-      </Badge>
-    )
+    onExcludedChange(next)
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("es-AR", {
-      style: "currency",
-      currency: "ARS",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount)
+  const toggleAll = (checked: boolean) => {
+    if (checked) {
+      onExcludedChange(new Set())
+      return
+    }
+
+    onExcludedChange(new Set(morosos.map((moroso) => moroso.socioId)))
   }
 
   if (morosos.length === 0) {
@@ -76,7 +106,14 @@ export const MorososTable = React.memo(function MorososTable({ morosos }: Moroso
       {/* Desktop Table */}
       <div className="hidden md:block rounded-lg border bg-card">
         {/* Header */}
-        <div className="grid grid-cols-[minmax(0,2fr)_minmax(0,80px)_minmax(0,100px)_minmax(0,110px)_minmax(0,120px)_minmax(0,80px)] gap-3 px-4 py-3 border-b bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+        <div className="grid grid-cols-[48px_minmax(0,2fr)_minmax(0,80px)_minmax(0,100px)_minmax(0,110px)_minmax(0,120px)_minmax(0,80px)] gap-3 px-4 py-3 border-b bg-muted/50 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <div className="flex items-center justify-center normal-case">
+            <Checkbox
+              checked={allSelected ? true : someSelected ? "indeterminate" : false}
+              onCheckedChange={(checked) => toggleAll(checked === true)}
+              aria-label="Seleccionar todos los morosos"
+            />
+          </div>
           <span>Socio</span>
           <span className="text-center">Estado</span>
           <span className="text-center">Severidad</span>
@@ -107,9 +144,16 @@ export const MorososTable = React.memo(function MorososTable({ morosos }: Moroso
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
-                  className="grid grid-cols-[minmax(0,2fr)_minmax(0,80px)_minmax(0,100px)_minmax(0,110px)_minmax(0,120px)_minmax(0,80px)] gap-3 items-center px-4 border-b last:border-b-0 hover:bg-muted/30 transition-colors"
+                  className="grid grid-cols-[48px_minmax(0,2fr)_minmax(0,80px)_minmax(0,100px)_minmax(0,110px)_minmax(0,120px)_minmax(0,80px)] gap-3 items-center px-4 border-b last:border-b-0 hover:bg-muted/30 transition-colors"
                 >
-                  {/* Socio */}
+                  <div className="flex justify-center">
+                    <Checkbox
+                      checked={!excludedSocioIds.has(moroso.socioId)}
+                      onCheckedChange={(checked) => toggleMoroso(moroso.socioId, checked === true)}
+                      aria-label={`Incluir a ${moroso.apellido}, ${moroso.nombre}`}
+                    />
+                  </div>
+
                   <div className="min-w-0">
                     <p className="font-medium text-foreground truncate">
                       {moroso.apellido}, {moroso.nombre}
@@ -131,7 +175,6 @@ export const MorososTable = React.memo(function MorososTable({ morosos }: Moroso
                     </p>
                   </div>
 
-                  {/* Estado */}
                   <div className="text-center">
                     <Badge
                       variant={moroso.estado === "ACTIVO" ? "default" : "secondary"}
@@ -141,17 +184,14 @@ export const MorososTable = React.memo(function MorososTable({ morosos }: Moroso
                     </Badge>
                   </div>
 
-                  {/* Severidad */}
                   <div className="text-center">
                     {getSeveridadBadge(moroso.mesesDeuda)}
                   </div>
 
-                  {/* Monto Deuda */}
                   <div className="text-center font-semibold text-foreground">
                     {formatCurrency(moroso.montoTotalDeuda)}
                   </div>
 
-                  {/* Periodos */}
                   <div className="text-center">
                     <span className="text-xs text-muted-foreground">
                       {moroso.periodosAdeudados.slice(0, 3).join(", ")}
@@ -163,7 +203,6 @@ export const MorososTable = React.memo(function MorososTable({ morosos }: Moroso
                     </span>
                   </div>
 
-                  {/* Accion */}
                   <div className="text-right">
                     <Button
                       variant="ghost"
@@ -187,14 +226,22 @@ export const MorososTable = React.memo(function MorososTable({ morosos }: Moroso
         {morosos.slice(0, 20).map((moroso) => (
           <Card key={moroso.socioId}>
             <CardContent className="p-4">
-              <div className="flex justify-between items-start mb-3">
-                <div>
-                  <p className="font-medium text-foreground">
-                    {moroso.apellido}, {moroso.nombre}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    DNI: {moroso.dni}
-                  </p>
+              <div className="flex justify-between items-start gap-3 mb-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <Checkbox
+                    checked={!excludedSocioIds.has(moroso.socioId)}
+                    onCheckedChange={(checked) => toggleMoroso(moroso.socioId, checked === true)}
+                    aria-label={`Incluir a ${moroso.apellido}, ${moroso.nombre}`}
+                    className="mt-1"
+                  />
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground">
+                      {moroso.apellido}, {moroso.nombre}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      DNI: {moroso.dni}
+                    </p>
+                  </div>
                 </div>
                 {getSeveridadBadge(moroso.mesesDeuda)}
               </div>
