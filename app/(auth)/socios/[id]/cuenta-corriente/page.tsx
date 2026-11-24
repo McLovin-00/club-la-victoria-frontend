@@ -198,6 +198,24 @@ export default function CuentaCorrientePage() {
 
   // Net payable after individual credit
   const creditoDisponible = Number(cuentaCorriente?.creditoIndividual ?? 0);
+  const montoMensualPagoAnual =
+    typeof socio?.categoria === "object" && socio.categoria !== null
+      ? Number((socio.categoria as { montoMensual?: number }).montoMensual)
+      : NaN;
+  const cuotasDelAnioPagoAnual = (cuentaCorriente?.cuotas ?? []).filter(
+    (cuota) => cuota.periodo.startsWith(`${anioSeleccionadoPagoAnual}-`),
+  );
+  const cuotasYaPagadasAnio = cuotasDelAnioPagoAnual.filter((cuota) => cuota.estado === "PAGADA").length;
+  const cuotasPendientesAnio = cuotasDelAnioPagoAnual.filter((cuota) => cuota.estado !== "PAGADA");
+  const mesesSinCuotaAnio = 12 - cuotasDelAnioPagoAnual.length;
+  const mesesAPagarAnio = cuotasPendientesAnio.length + mesesSinCuotaAnio;
+  const resumenAnualDisponible = Boolean(cuentaCorriente) && Number.isFinite(montoMensualPagoAnual);
+  const brutoAnualCentavos = cuotasPendientesAnio.reduce(
+    (suma, cuota) => suma + Math.round(Number(cuota.monto) * 100),
+    mesesSinCuotaAnio * Math.round(montoMensualPagoAnual * 100),
+  );
+  const saldoAnualCentavos = Math.min(brutoAnualCentavos, Math.round(creditoDisponible * 100));
+  const montoCobradoAnual = (brutoAnualCentavos - saldoAnualCentavos) / 100;
   const totalNeto = Math.max(totalSeleccionado - creditoDisponible, 0);
   const montoNetoPagoIndividual = cuotaPagoIndividual
     ? Math.max(Number(cuotaPagoIndividual.monto) - creditoDisponible, 0)
@@ -1644,29 +1662,7 @@ export default function CuentaCorrientePage() {
               Se generarán las cuotas que no existan y se pagarán todas las pendientes del año {anioSeleccionadoPagoAnual}. El monto se calcula según la categoría actual del socio.
             </div>
 
-            {(() => {
-              const montoMensual =
-                typeof socio?.categoria === "object" && socio.categoria !== null
-                  ? (socio.categoria as { montoMensual?: number }).montoMensual
-                  : undefined;
-
-              if (!montoMensual) return null;
-
-              const cuotasDelAnio = (cuentaCorriente?.cuotas ?? []).filter(
-                (c) => c.periodo.startsWith(String(anioSeleccionadoPagoAnual)),
-              );
-              const cuotasYaPagadasAnio = cuotasDelAnio.filter((c) => c.estado === "PAGADA").length;
-              const cuotasPendientesExistentes = cuotasDelAnio.filter((c) => c.estado === "PENDIENTE");
-              const mesesSinCuota = 12 - cuotasDelAnio.length;
-              const mesesAPagar = cuotasPendientesExistentes.length + mesesSinCuota;
-
-              // Total real: monto de cuotas pendientes existentes + montoMensual × meses sin cuota
-              const totalCuotasPendientesExistentes = cuotasPendientesExistentes.reduce(
-                (acc, c) => acc + Number(c.monto),
-                0,
-              );
-              const totalEstimado = totalCuotasPendientesExistentes + mesesSinCuota * montoMensual;
-
+            {resumenAnualDisponible && (() => {
               const fmt = (v: number) =>
                 new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", minimumFractionDigits: 0 }).format(v);
 
@@ -1677,22 +1673,30 @@ export default function CuentaCorrientePage() {
                   </p>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Meses a pagar</span>
-                    <span className="font-medium">{mesesAPagar} de 12</span>
+                    <span className="font-medium">{mesesAPagarAnio} de 12</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Monto por mes</span>
-                    <span className="font-medium">{fmt(montoMensual)}</span>
+                    <span className="font-medium">{fmt(montoMensualPagoAnual)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Total de cuotas</span>
+                    <span className="font-medium">{fmt(brutoAnualCentavos / 100)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Saldo a favor aplicado</span>
+                    <span className="font-medium">{saldoAnualCentavos > 0 ? "−" : ""}{fmt(saldoAnualCentavos / 100)}</span>
                   </div>
                   <div className="flex justify-between text-sm font-semibold border-t border-emerald-200 pt-1 mt-1">
                     <span>Total a pagar</span>
-                    <span className="text-emerald-700">{fmt(totalEstimado)}</span>
+                    <span className="text-emerald-700">{fmt(montoCobradoAnual)}</span>
                   </div>
                   {cuotasYaPagadasAnio > 0 && (
                     <p className="text-xs text-muted-foreground pt-1">
                       {cuotasYaPagadasAnio} {cuotasYaPagadasAnio === 1 ? "mes ya pagado" : "meses ya pagados"} no se incluyen.
                     </p>
                   )}
-                  {mesesAPagar === 0 && (
+                  {mesesAPagarAnio === 0 && (
                     <p className="text-xs font-medium text-emerald-700 pt-1">
                       ✓ Todas las cuotas del año ya están pagadas.
                     </p>
@@ -1715,31 +1719,19 @@ export default function CuentaCorrientePage() {
               disabled={
                 !metodoPagoAnualId ||
                 pagoAnualMutation.isPending ||
-                (() => {
-                  const cuotasDelAnio = (cuentaCorriente?.cuotas ?? []).filter(
-                    (c) => c.periodo.startsWith(String(anioSeleccionadoPagoAnual)),
-                  );
-                  const pendientes = cuotasDelAnio.filter((c) => c.estado === "PENDIENTE").length;
-                  const sinCuota = 12 - cuotasDelAnio.length;
-                  return pendientes === 0 && sinCuota === 0;
-                })()
+                !resumenAnualDisponible ||
+                mesesAPagarAnio === 0
               }
-              title={
-                (() => {
-                  const cuotasDelAnio = (cuentaCorriente?.cuotas ?? []).filter(
-                    (c) => c.periodo.startsWith(String(anioSeleccionadoPagoAnual)),
-                  );
-                  const pendientes = cuotasDelAnio.filter((c) => c.estado === "PENDIENTE").length;
-                  const sinCuota = 12 - cuotasDelAnio.length;
-                  return pendientes === 0 && sinCuota === 0
-                    ? "Todas las cuotas del año ya están pagadas"
-                    : undefined;
-                })()
-              }
+              title={resumenAnualDisponible && mesesAPagarAnio === 0 ? "Todas las cuotas del año ya están pagadas" : undefined}
               onClick={() => {
-                if (!idValido || !metodoPagoAnualId) return;
+                if (!idValido || !metodoPagoAnualId || !resumenAnualDisponible || mesesAPagarAnio === 0) return;
                 pagoAnualMutation.mutate(
-                  { socioId, anio: anioSeleccionadoPagoAnual, metodoPagoId: metodoPagoAnualId },
+                  {
+                    socioId,
+                    anio: anioSeleccionadoPagoAnual,
+                    metodoPagoId: metodoPagoAnualId,
+                    montoCobradoEsperado: montoCobradoAnual,
+                  },
                   { onSuccess: () => setModalPagoAnualAbierto(false) },
                 );
               }}
