@@ -1,6 +1,7 @@
 "use client";
 
 import { MovementList } from "@/components/cuenta-corriente/movement-list";
+import { RendicionCobradora } from "@/components/cuenta-corriente/rendicion-cobradora";
 
 import { useState, useMemo, useEffect } from "react";
 import { DashboardLayout } from "@/components/dashboard-layout";
@@ -222,6 +223,8 @@ export default function CuentaCorrienteCobradoresPage() {
           </Alert>
         ) : (
           <>
+            <RendicionCobradora key={cobradorId} cobradorId={cobradorId} />
+
             {/* Resumen compacto */}
             <SummarySection
               saldoActual={data?.saldo ?? 0}

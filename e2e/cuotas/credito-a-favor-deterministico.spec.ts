@@ -288,4 +288,43 @@ test.describe.serial("Credito a favor deterministico", () => {
     await abrirCuentaCorriente(page, socioId);
     await expect(page.getByText(/Crédito a favor/i)).toHaveCount(0);
   });
+
+  test("descuenta el saldo al pagar el año y confirma el importe neto", async ({ page, request }) => {
+    expect(socioId, "el socio ficticio del escenario anterior debe existir").toEqual(expect.any(Number));
+    const id = socioId!;
+    const anio = new Date().getFullYear();
+    const cuentaInicial = await obtenerCuentaCorriente(request, token, id);
+    const periodo = Array.from({ length: 12 }, (_, index) =>
+      `${anio}-${String(index + 1).padStart(2, "0")}`,
+    ).find((mes) => !cuentaInicial.cuotas.some((cuota) => cuota.periodo === mes))!;
+    await generarCuota(request, token, id, periodo);
+    const cuota = await obtenerCuotaPendiente(request, token, id, periodo);
+    const metodoPago = await obtenerMetodoPago(request, token);
+    const saldo = Math.min(cuota.monto, 2000);
+    await registrarPago(request, token, cuota.id, metodoPago.id, cuota.monto + saldo);
+    const bruto = (12 - cuentaInicial.cuotas.length - 1) * cuota.monto;
+
+    await iniciarSesion(page);
+    await abrirCuentaCorriente(page, id);
+    await page.getByRole("button", { name: "Pagar año completo" }).click();
+    const dialogo = page.getByRole("dialog");
+    await expect(dialogo.getByText("Saldo a favor aplicado", { exact: true })).toBeVisible();
+    await expect(dialogo.getByText(`−${formatCurrency(saldo)}`)).toBeVisible();
+    const respuesta = page.waitForResponse((response) =>
+      response.url() === `${API_URL}/cobros/pago-anual` && response.request().method() === "POST",
+    );
+    await dialogo.getByRole("button", { name: "Confirmar pago anual" }).click();
+    const operacion = await respuesta;
+    expect(operacion.request().postDataJSON()).toMatchObject({ montoCobradoEsperado: bruto - saldo });
+    expect(operacion.status()).toBe(201);
+    expect(await operacion.json()).toMatchObject({
+      totalPagado: bruto,
+      creditoAplicado: saldo,
+      montoCobrado: bruto - saldo,
+    });
+
+    const cuentaFinal = await obtenerCuentaCorriente(request, token, id);
+    expect(cuentaFinal.creditoIndividual).toBe(0);
+    expect(cuentaFinal.cuotas.filter((item) => item.estado === "PAGADA")).toHaveLength(12);
+  });
 });

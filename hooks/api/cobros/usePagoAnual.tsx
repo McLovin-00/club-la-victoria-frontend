@@ -8,6 +8,7 @@ export interface PagoAnualPayload {
   socioId: number;
   anio: number;
   metodoPagoId: number;
+  montoCobradoEsperado: number;
   observaciones?: string;
 }
 
@@ -16,6 +17,8 @@ export interface PagoAnualResponse {
   cuotasPagadas: number;
   cuotasYaPagadas: number;
   totalPagado: number;
+  creditoAplicado: number;
+  montoCobrado: number;
   periodosPagados: string[];
 }
 
@@ -32,10 +35,10 @@ export const usePagoAnual = () => {
         style: "currency",
         currency: "ARS",
         minimumFractionDigits: 0,
-      }).format(result.totalPagado);
+      }).format(result.montoCobrado);
 
       toast.success("Pago anual registrado", {
-        description: `${result.cuotasPagadas} cuotas pagadas · ${total}`,
+        description: `${result.cuotasPagadas} cuotas pagadas · ${total} cobrados`,
       });
 
       queryClient.invalidateQueries({ queryKey: ["cuenta-corriente"] });
@@ -43,10 +46,16 @@ export const usePagoAnual = () => {
       queryClient.invalidateQueries({ queryKey: ["estado-pagos"] });
       queryClient.invalidateQueries({ queryKey: ["morosos"] });
     },
-    onError: (error) => {
+    onError: async (error, { socioId }) => {
       logError(error, "usePagoAnual");
       const uiError = adaptError(error);
       toast.error(uiError.title, { description: uiError.message });
+      if (error.response?.status === 409) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["cuenta-corriente", socioId] }),
+          queryClient.invalidateQueries({ queryKey: ["socios"] }),
+        ]);
+      }
     },
   });
 };
