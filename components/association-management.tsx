@@ -20,6 +20,7 @@ import { useTemporadas } from "@/hooks/api/temporadas/useTemporadas";
 import { useSociosTemporada } from "@/hooks/api/socios/useSociosTemporada";
 import { useAgregarSocioTemporada } from "@/hooks/api/socios/useAgregarSocioTemporada";
 import { useEliminarSocioTemporada } from "@/hooks/api/socios/useEliminarSocioTemporada";
+import { useActualizarCertificadoMedico } from "@/hooks/api/socios/useActualizarCertificadoMedico";
 
 // Import new components
 import { SeasonSelector } from "@/components/association/season-selector";
@@ -51,6 +52,7 @@ export function AssociationManagement() {
   // Hooks para agregar y eliminar socios de la temporada
   const agregarSocioMutation = useAgregarSocioTemporada();
   const eliminarSocioMutation = useEliminarSocioTemporada();
+  const certificadoMedicoMutation = useActualizarCertificadoMedico();
 
   // Auto-select current or latest season
   useEffect(() => {
@@ -127,6 +129,24 @@ export function AssociationManagement() {
     eliminarSocioMutation.mutate({
       socioId: idSocio,
       temporadaId: temporadaSeleccionada,
+    });
+  };
+
+  const handleActualizarCertificadoMedico = (
+    socioId: number,
+    certificadoMedicoPresentado: boolean,
+  ) => {
+    if (!puedeGestionarSocios) {
+      toast.error("No se pueden modificar certificados de temporadas finalizadas");
+      return;
+    }
+
+    if (!temporadaSeleccionada) return;
+
+    certificadoMedicoMutation.mutate({
+      socioId,
+      temporadaId: temporadaSeleccionada,
+      certificadoMedicoPresentado,
     });
   };
 
@@ -235,7 +255,13 @@ export function AssociationManagement() {
               searchTerm={searchTerm}
               onSearchChange={handleSearchChange}
               onRemoveMember={handleEliminarAsociacion}
+              onCertificateChange={handleActualizarCertificadoMedico}
               isRemoving={eliminarSocioMutation.isPending}
+              updatingCertificateMemberId={
+                certificadoMedicoMutation.isPending
+                  ? certificadoMedicoMutation.variables?.socioId ?? null
+                  : null
+              }
               canManageMembers={puedeGestionarSocios}
               currentPage={currentPage}
               totalPages={totalPages}

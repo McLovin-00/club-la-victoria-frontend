@@ -6,6 +6,7 @@ import { STALE_TIME } from "@/lib/constants";
 export interface SocioTemporada {
   id: number;
   socio: SocioWithFoto;
+  certificadoMedicoPresentado: boolean;
 }
 
 export const useSociosTemporada = (temporadaId: string) => {

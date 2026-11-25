@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Search, Mail, Phone, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PAGINACION } from "@/lib/constants";
 import { SocioTemporada } from "@/hooks/api/socios/useSociosTemporada";
 
@@ -34,7 +35,9 @@ interface SeasonMemberListProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
   onRemoveMember: (memberId: string) => void;
+  onCertificateChange: (memberId: number, presentado: boolean) => void;
   isRemoving: boolean;
+  updatingCertificateMemberId: number | null;
   canManageMembers: boolean;
   currentPage: number;
   totalPages: number;
@@ -48,7 +51,9 @@ export const SeasonMemberList = React.memo(function SeasonMemberList({
   searchTerm,
   onSearchChange,
   onRemoveMember,
+  onCertificateChange,
   isRemoving,
+  updatingCertificateMemberId,
   canManageMembers,
   currentPage,
   totalPages,
@@ -153,6 +158,40 @@ export const SeasonMemberList = React.memo(function SeasonMemberList({
                   <Badge variant="secondary">Activo</Badge>
                 </div>
               </div>
+              <label
+                className="flex min-w-52 items-center gap-3 rounded-md border border-border px-3 py-2"
+                title={
+                  canManageMembers
+                    ? undefined
+                    : "No se puede modificar el certificado de una temporada finalizada"
+                }
+              >
+                <Checkbox
+                  checked={socio.certificadoMedicoPresentado ?? false}
+                  disabled={
+                    !canManageMembers ||
+                    updatingCertificateMemberId === socio.id
+                  }
+                  onCheckedChange={(checked) =>
+                    onCertificateChange(socio.id, checked === true)
+                  }
+                  aria-label={`Certificado médico presentado para ${socio.socio.nombre} ${socio.socio.apellido}`}
+                />
+                <span className="flex flex-col">
+                  <span className="text-sm font-medium">Certificado médico</span>
+                  <span
+                    className={
+                      socio.certificadoMedicoPresentado
+                        ? "text-xs text-emerald-700"
+                        : "text-xs text-amber-700"
+                    }
+                  >
+                    {socio.certificadoMedicoPresentado
+                      ? "Presentado"
+                      : "Pendiente"}
+                  </span>
+                </span>
+              </label>
               {canManageMembers && (
                 <div className="flex-shrink-0">
                   <AlertDialog>

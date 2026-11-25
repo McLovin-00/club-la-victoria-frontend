@@ -238,11 +238,22 @@ test.describe.serial("TP03-EXT - Asociar socios a temporada (extendido)", () => 
       }
     }
 
-    // Buscar el socio en la lista de asociados
-    const filaSocio = page.locator("tr, [role='row']").filter({ hasText: socioDePrueba.dni });
-    if ((await filaSocio.count()) > 0) {
-      await expect(filaSocio.first()).toBeVisible({ timeout: 10000 });
-    }
+    const tarjetaSocio = page
+      .locator("div.rounded-lg")
+      .filter({ hasText: socioDePrueba.dni })
+      .first();
+    await expect(tarjetaSocio).toBeVisible({ timeout: 10000 });
+
+    const certificadoMedico = page.getByRole("checkbox", {
+      name: `Certificado médico presentado para ${socioDePrueba.nombre} ${socioDePrueba.apellido}`,
+    });
+    await expect(certificadoMedico).toBeVisible();
+    await expect(certificadoMedico).not.toBeChecked();
+    await certificadoMedico.click();
+    await expect(certificadoMedico).toBeChecked();
+    await expect(
+      tarjetaSocio.getByText("Presentado", { exact: true }),
+    ).toBeVisible();
   });
 
   // TP03-EXT-03: Eliminar socio asociado
@@ -264,26 +275,21 @@ test.describe.serial("TP03-EXT - Asociar socios a temporada (extendido)", () => 
       }
     }
 
-    // Buscar el socio y eliminar
-    const filaSocio = page.locator("tr, [role='row']").filter({ hasText: socioDePrueba.dni });
-    if ((await filaSocio.count()) > 0) {
-      const botonEliminar = filaSocio.first().getByRole("button", { name: /Eliminar|Quitar|Desasociar/i });
-      
-      if ((await botonEliminar.count()) > 0) {
-        await botonEliminar.click();
+    const tarjetaSocio = page
+      .locator("div.rounded-lg")
+      .filter({ hasText: socioDePrueba.dni })
+      .first();
+    const botonEliminar = tarjetaSocio.getByRole("button", {
+      name: "Eliminar socio de la temporada",
+    });
+    await expect(botonEliminar).toBeVisible();
+    await botonEliminar.click();
 
-        // Confirmar eliminación
-        const dialogo = page.getByRole("alertdialog");
-        if ((await dialogo.count()) > 0) {
-          await dialogo.getByRole("button", { name: /Eliminar|Confirmar/i }).click();
-        }
+    const dialogo = page.getByRole("alertdialog");
+    await expect(dialogo).toBeVisible();
+    await dialogo.getByRole("button", { name: /^Eliminar$/ }).click();
 
-        // Verificar que ya no aparece
-        await expect(
-          page.locator("tr, [role='row']").filter({ hasText: socioDePrueba.dni })
-        ).toHaveCount(0, { timeout: 10000 });
-      }
-    }
+    await expect(tarjetaSocio).toHaveCount(0, { timeout: 10000 });
   });
 
   // TP03-EXT-04: Temporada finalizada bloquea gestión
